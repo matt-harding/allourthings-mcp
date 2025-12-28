@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct AddEditApplianceView: View {
+struct AddEditItemView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
@@ -86,7 +86,7 @@ struct AddEditApplianceView: View {
                         .lineLimit(3...6)
                 }
             }
-            .navigationTitle(isEditing ? "Edit Appliance" : "Add Appliance")
+            .navigationTitle(isEditing ? "Edit Item" : "Add Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
