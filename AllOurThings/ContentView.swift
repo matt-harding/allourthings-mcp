@@ -11,6 +11,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
+    @State private var showingAddSheet = false
 
     var body: some View {
         NavigationSplitView {
@@ -29,20 +30,16 @@ struct ContentView: View {
                     EditButton()
                 }
                 ToolbarItem {
-                    Button(action: addItem) {
+                    Button(action: { showingAddSheet = true }) {
                         Label("Add Item", systemImage: "plus")
                     }
                 }
             }
+            .sheet(isPresented: $showingAddSheet) {
+                AddEditApplianceView()
+            }
         } detail: {
             Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(name: "New Appliance")
-            modelContext.insert(newItem)
         }
     }
 
@@ -111,6 +108,7 @@ struct ApplianceRowView: View {
 
 struct ApplianceDetailView: View {
     let item: Item
+    @State private var showingEditSheet = false
 
     var body: some View {
         ScrollView {
@@ -156,6 +154,16 @@ struct ApplianceDetailView: View {
         }
         .navigationTitle(item.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Edit") {
+                    showingEditSheet = true
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            AddEditApplianceView(item: item)
+        }
     }
 }
 
