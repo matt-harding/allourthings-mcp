@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import FoundationModels
 
 struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
@@ -9,48 +8,57 @@ struct ChatView: View {
     @State private var questionText = ""
     @State private var responses: [QuestionResponse] = []
     @State private var isLoading = false
-    @State private var languageModelSession: Any?
-    @State private var isFoundationModelsAvailable = false
+    @State private var hasAPIKey = false
+    @State private var showingSettings = false
 
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                if !isFoundationModelsAvailable {
-                    // Foundation Models not available message
-                    VStack(spacing: Theme.Spacing.medium) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(Theme.Colors.peach)
+                if !hasAPIKey {
+                    // No API Key message
+                    VStack(spacing: Theme.Spacing.large) {
+                        VStack(spacing: Theme.Spacing.medium) {
+                            Image(systemName: "key.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(Theme.Colors.blushPink)
 
-                        Text("Apple Intelligence Not Available")
-                            .font(Theme.Fonts.cosyHeadline())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
+                            Text("API Key Required")
+                                .font(Theme.Fonts.cosyLargeTitle())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
 
-                        Text("This chat feature requires Apple Intelligence and Foundation Models, which are not available on this device or iOS version.")
-                            .font(Theme.Fonts.cosyBody())
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(Theme.Colors.softGray)
-
-                        Text("Requirements:")
-                            .font(Theme.Fonts.cosySubheadline())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
-
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                            Text("• iOS 26 or later")
-                            Text("• Apple Intelligence enabled")
-                            Text("• A17 Pro, M1, or newer chip")
+                            Text("Add your Gemini API key to enable AI chat about your items.")
+                                .font(Theme.Fonts.cosyBody())
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(Theme.Colors.softGray)
                         }
-                        .font(Theme.Fonts.cosyCaption())
-                        .foregroundColor(Theme.Colors.softGray)
+                        .padding(Theme.Spacing.xl)
+                        .background(Theme.Colors.warmCream)
+                        .cornerRadius(Theme.CornerRadius.large)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                .stroke(Theme.Colors.blushPink, lineWidth: Theme.BorderWidth.thick)
+                        )
+                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+
+                        Button(action: { showingSettings = true }) {
+                            HStack {
+                                Image(systemName: "gearshape.fill")
+                                Text("Open Settings")
+                            }
+                            .font(Theme.Fonts.cosyButton())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, Theme.Spacing.large)
+                            .padding(.vertical, Theme.Spacing.small)
+                            .background(Theme.Colors.blushPink)
+                            .cornerRadius(Theme.CornerRadius.xl)
+                            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                                    .stroke(Theme.Colors.cocoaBrown.opacity(0.3), lineWidth: Theme.BorderWidth.thin)
+                            )
+                        }
+                        .cosyButtonPress()
                     }
-                    .padding(Theme.Spacing.xl)
-                    .background(Theme.Colors.warmCream)
-                    .cornerRadius(Theme.CornerRadius.large)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                            .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
-                    )
-                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
                     .padding(Theme.Spacing.medium)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -201,8 +209,19 @@ struct ChatView: View {
             }
             .cosyGradientBackground(topColor: Theme.Colors.skyBlue.opacity(0.3), bottomColor: Theme.Colors.skyBlue)
             .navigationTitle("Item Questions")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingSettings = true }) {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundColor(Theme.Colors.blushPink)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+            }
             .onAppear {
-                initializeLanguageModel()
+                checkAPIKey()
             }
         }
     }
@@ -224,24 +243,11 @@ struct ChatView: View {
         }
     }
 
-    private func initializeLanguageModel() {
-        if #available(iOS 26.0, *) {
-            languageModelSession = LanguageModelSession()
-            isFoundationModelsAvailable = true
-        } else {
-            isFoundationModelsAvailable = false
-        }
+    private func checkAPIKey() {
+        hasAPIKey = KeychainHelper.shared.hasGeminiKey()
     }
 
     private func generateAnswer(for question: String) async -> String {
-        guard #available(iOS 26.0, *) else {
-            return "Apple Intelligence is not available on this device."
-        }
-
-        guard let session = languageModelSession as? LanguageModelSession else {
-            return "Apple Intelligence is not available on this device."
-        }
-
         // Build context about the user's items
         let itemsContext = buildItemsContext()
 
@@ -257,15 +263,10 @@ struct ChatView: View {
         """
 
         do {
-            let response = try await session.respond(to: prompt)
-            return response.content
+            let response = try await GeminiService.shared.generateResponse(prompt: prompt)
+            return response
         } catch {
-            // Check if this is a model assets error (common in simulator)
-            let errorMessage = error.localizedDescription
-            if errorMessage.contains("Model assets are unavailable") {
-                return "Apple Intelligence is not available in the iOS Simulator. This feature requires a physical device with Apple Intelligence enabled (iPhone 15 Pro or newer with iOS 26+)."
-            }
-            return "Sorry, I couldn't process your question at this time. Error: \(errorMessage)"
+            return "Sorry, I couldn't process your question. Error: \(error.localizedDescription)"
         }
     }
 
