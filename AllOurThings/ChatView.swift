@@ -14,122 +14,196 @@ struct ChatView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 16) {
+            VStack(spacing: 0) {
                 if !isFoundationModelsAvailable {
                     // Foundation Models not available message
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundColor(.orange)
+                    VStack(spacing: Theme.Spacing.medium) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(Theme.Colors.peach)
 
                         Text("Apple Intelligence Not Available")
-                            .font(.headline)
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
 
                         Text("This chat feature requires Apple Intelligence and Foundation Models, which are not available on this device or iOS version.")
-                            .font(.body)
+                            .font(Theme.Fonts.cosyBody())
                             .multilineTextAlignment(.center)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Theme.Colors.softGray)
 
                         Text("Requirements:")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
+                            .font(Theme.Fonts.cosySubheadline())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
 
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             Text("• iOS 26 or later")
                             Text("• Apple Intelligence enabled")
                             Text("• A17 Pro, M1, or newer chip")
                         }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(Theme.Fonts.cosyCaption())
+                        .foregroundColor(Theme.Colors.softGray)
                     }
-                    .padding()
+                    .padding(Theme.Spacing.xl)
+                    .background(Theme.Colors.warmCream)
+                    .cornerRadius(Theme.CornerRadius.large)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                            .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
+                    )
+                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                    .padding(Theme.Spacing.medium)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    // Question input section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Ask about your items")
-                            .font(.headline)
-                            .padding(.horizontal)
+                    // Responses section
+                    if responses.isEmpty && !isLoading {
+                        // Empty state with magical atmosphere
+                        VStack(spacing: Theme.Spacing.medium) {
+                            ZStack {
+                                // Decorative stars in background
+                                ForEach(0..<8, id: \.self) { index in
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(Theme.Colors.butterYellow.opacity(0.05))
+                                        .offset(
+                                            x: CGFloat.random(in: -150...150),
+                                            y: CGFloat.random(in: -150...150)
+                                        )
+                                }
 
-                        HStack {
-                            TextField("What would you like to know about your items?", text: $questionText, axis: .vertical)
-                                .textFieldStyle(.roundedBorder)
-                                .lineLimit(3...6)
+                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                    .font(.system(size: 70))
+                                    .foregroundColor(Theme.Colors.softLavender)
+                            }
+
+                            Text("Let's Chat!")
+                                .font(Theme.Fonts.cosyLargeTitle())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+
+                            Text("Ask questions about your items and get helpful answers")
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.softGray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, Theme.Spacing.xl)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: Theme.Spacing.medium) {
+                                ForEach(responses.reversed()) { response in
+                                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                        // User question bubble
+                                        HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+                                            Image(systemName: "person.crop.circle.fill")
+                                                .font(.system(size: 24))
+                                                .foregroundColor(Theme.Colors.softLavender)
+
+                                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                                Text(response.question)
+                                                    .font(Theme.Fonts.cosyBody())
+                                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                            }
+                                            .padding(Theme.Spacing.small)
+                                            .background(Theme.Colors.blushPink.opacity(0.85))
+                                            .cornerRadius(Theme.CornerRadius.large)
+                                            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                                    .stroke(Theme.Colors.blushPink, lineWidth: Theme.BorderWidth.standard)
+                                            )
+                                            .frame(maxWidth: .infinity * 0.75, alignment: .leading)
+                                        }
+                                        .padding(.horizontal, Theme.Spacing.medium)
+
+                                        // AI answer bubble
+                                        HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+                                            Spacer()
+                                                .frame(width: 30)
+
+                                            HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+                                                Image(systemName: "sparkles")
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(Theme.Colors.peach)
+
+                                                Text(response.answer)
+                                                    .font(Theme.Fonts.cosyBody())
+                                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                            }
+                                            .padding(Theme.Spacing.small)
+                                            .background(Theme.Colors.cloudWhite)
+                                            .cornerRadius(Theme.CornerRadius.large)
+                                            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                                    .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
+                                            )
+                                            .frame(maxWidth: .infinity * 0.75, alignment: .leading)
+                                        }
+                                        .padding(.horizontal, Theme.Spacing.medium)
+
+                                        // Timestamp
+                                        Text(response.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                            .font(Theme.Fonts.cosyCaption())
+                                            .foregroundColor(Theme.Colors.softGray)
+                                            .padding(.horizontal, Theme.Spacing.medium)
+                                            .padding(.trailing, Theme.Spacing.xl)
+                                            .frame(maxWidth: .infinity, alignment: .trailing)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, Theme.Spacing.medium)
+                        }
+                    }
+
+                    // Input section at bottom
+                    VStack(spacing: 0) {
+                        Divider()
+                            .background(Theme.Colors.gentleBorder)
+
+                        HStack(spacing: Theme.Spacing.small) {
+                            TextField("What would you like to know?", text: $questionText, axis: .vertical)
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .padding(Theme.Spacing.small)
+                                .background(Theme.Colors.warmCream)
+                                .cornerRadius(Theme.CornerRadius.xl)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                                        .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                )
+                                .lineLimit(1...3)
 
                             Button(action: askQuestion) {
                                 if isLoading {
                                     ProgressView()
-                                        .scaleEffect(0.8)
+                                        .tint(.white)
                                 } else {
                                     Image(systemName: "paperplane.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.white)
                                 }
                             }
+                            .frame(width: 44, height: 44)
+                            .background(questionText.isEmpty || isLoading ? Theme.Colors.softGray : Theme.Colors.blushPink)
+                            .cornerRadius(22)
                             .disabled(questionText.isEmpty || isLoading)
+                            .cosyButtonPress()
                         }
-                        .padding(.horizontal)
-                    }
-
-                    Divider()
-
-                    // Responses section
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(responses.reversed()) { response in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    // Question
-                                    HStack {
-                                        Image(systemName: "person.circle")
-                                            .foregroundColor(.blue)
-                                        Text(response.question)
-                                            .font(.body)
-                                            .fontWeight(.medium)
-                                    }
-
-                                    // Answer
-                                    HStack {
-                                        Image(systemName: "lightbulb")
-                                            .foregroundColor(.orange)
-                                        Text(response.answer)
-                                            .font(.body)
-                                            .foregroundColor(.secondary)
-                                    }
-
-                                    Text(response.timestamp.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .trailing)
-                                }
-                                .padding()
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
-                                .padding(.horizontal)
-                            }
-                        }
-                    }
-
-                    if responses.isEmpty && !isLoading {
-                        Spacer()
-                        VStack(spacing: 8) {
-                            Image(systemName: "questionmark.circle")
-                                .font(.largeTitle)
-                                .foregroundColor(.secondary)
-                            Text("Ask questions about your items")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            Text("Get help finding items, maintenance tips, or general information")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding()
-                        Spacer()
+                        .padding(Theme.Spacing.medium)
+                        .background(Theme.Colors.cloudWhite)
+                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 0, y: -3)
+                        .overlay(
+                            Rectangle()
+                                .fill(Theme.Colors.gentleBorder)
+                                .frame(height: Theme.BorderWidth.thin)
+                                .frame(maxHeight: .infinity, alignment: .top)
+                        )
                     }
                 }
             }
+            .cosyGradientBackground(topColor: Theme.Colors.skyBlue.opacity(0.3), bottomColor: Theme.Colors.skyBlue)
             .navigationTitle("Item Questions")
-        .onAppear {
-            initializeLanguageModel()
-        }
+            .onAppear {
+                initializeLanguageModel()
+            }
         }
     }
 

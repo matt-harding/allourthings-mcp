@@ -9,20 +9,33 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    init() {
+        // Configure tab bar appearance for cosy aesthetic
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.backgroundColor = UIColor(Theme.Colors.warmCream)
+        tabBarAppearance.shadowColor = UIColor(Theme.Colors.gentleBorder)
+
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
+    }
+
     var body: some View {
         TabView {
             ItemListView()
                 .tabItem {
-                    Image(systemName: "list.bullet")
+                    Image(systemName: "book.fill")
                     Text("Items")
                 }
 
             ChatView()
                 .tabItem {
-                    Image(systemName: "questionmark.circle")
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
                     Text("Chat")
                 }
         }
+        .tint(Theme.Colors.blushPink)
     }
 }
 

@@ -6,33 +6,57 @@ struct ItemListView: View {
     @Query private var items: [Item]
     @State private var showingAddSheet = false
 
+    let columns = [
+        GridItem(.flexible(), spacing: Theme.Spacing.xs),
+        GridItem(.flexible(), spacing: Theme.Spacing.xs)
+    ]
+
     var body: some View {
         NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        ItemDetailView(item: item)
-                    } label: {
-                        ItemRowView(item: item)
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
+                    ForEach(items) { item in
+                        NavigationLink {
+                            ItemDetailView(item: item)
+                        } label: {
+                            ItemRowView(item: item)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .onDelete(perform: deleteItems)
+                .padding(Theme.Spacing.xs)
             }
+            .background(Theme.Colors.skyBlue)
+            .navigationTitle("Items")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                 }
                 ToolbarItem {
                     Button(action: { showingAddSheet = true }) {
-                        Label("Add Item", systemImage: "plus")
+                        Label("Add Item", systemImage: "plus.circle.fill")
                     }
+                    .tint(Theme.Colors.blushPink)
+                    .cosyButtonPress()
                 }
             }
             .sheet(isPresented: $showingAddSheet) {
                 AddEditItemView()
             }
         } detail: {
-            Text("Select an item")
+            VStack(spacing: Theme.Spacing.medium) {
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(Theme.Colors.softLavender)
+                Text("Your Collection Awaits")
+                    .font(Theme.Fonts.cosyHeadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+                Text("Select an item to see its details")
+                    .font(Theme.Fonts.cosyBody())
+                    .foregroundColor(Theme.Colors.softGray)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.Colors.skyBlue)
         }
     }
 
@@ -49,53 +73,65 @@ struct ItemRowView: View {
     let item: Item
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(item.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Spacer()
+        VStack(spacing: 0) {
+            // Placeholder Image Section
+            ZStack {
+                // Background with category color
+                Theme.Colors.categoryColor(for: item.category)
+                    .opacity(0.2)
+
+                // Placeholder icon
+                Image(systemName: "cube.box.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(Theme.Colors.categoryColor(for: item.category).opacity(0.4))
+
+                // Category badge in corner
                 if !item.category.isEmpty {
-                    Text(item.category)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.2))
-                        .cornerRadius(4)
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Text(item.category)
+                                .font(Theme.Fonts.cosyCaption())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Theme.Colors.categoryColor(for: item.category).opacity(0.9))
+                                .cornerRadius(Theme.CornerRadius.small)
+                                .padding(Theme.Spacing.xxs)
+                        }
+                        Spacer()
+                    }
                 }
             }
+            .frame(height: 120)
+            .frame(maxWidth: .infinity)
 
-            if !item.manufacturer.isEmpty || !item.modelNumber.isEmpty {
-                HStack {
-                    if !item.manufacturer.isEmpty {
-                        Text(item.manufacturer)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    if !item.manufacturer.isEmpty && !item.modelNumber.isEmpty {
-                        Text("·")
-                            .foregroundColor(.secondary)
-                    }
-                    if !item.modelNumber.isEmpty {
-                        Text(item.modelNumber)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
+            // Info Section
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(item.name)
+                    .font(Theme.Fonts.cosyHeadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !item.location.isEmpty {
-                HStack {
-                    Image(systemName: "location")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(item.location)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if !item.manufacturer.isEmpty {
+                    Text(item.manufacturer)
+                        .font(Theme.Fonts.cosyCaption())
+                        .foregroundColor(Theme.Colors.softGray)
+                        .lineLimit(1)
                 }
             }
+            .padding(Theme.Spacing.small)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Colors.cloudWhite)
         }
-        .padding(.vertical, 2)
+        .cornerRadius(Theme.CornerRadius.large)
+        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+        )
     }
 }
 
@@ -105,20 +141,22 @@ struct ItemDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.large) {
+                // Header Section
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(item.name)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                        .font(Theme.Fonts.cosyExtraLargeTitle())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
 
                     if !item.category.isEmpty {
                         Text(item.category)
-                            .font(.title2)
-                            .foregroundColor(.secondary)
+                            .font(Theme.Fonts.cosyLargeTitle())
+                            .foregroundColor(Theme.Colors.categoryColor(for: item.category))
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
+                // Details Section
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                     DetailRow(title: "Manufacturer", value: item.manufacturer)
                     DetailRow(title: "Model Number", value: item.modelNumber)
                     DetailRow(title: "Location", value: item.location)
@@ -130,28 +168,60 @@ struct ItemDetailView: View {
                     if let warrantyDate = item.warrantyExpirationDate {
                         DetailRow(title: "Warranty Expires", value: warrantyDate.formatted(date: .abbreviated, time: .omitted))
                     }
+                }
 
-                    if !item.notes.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
+                // Notes Section
+                if !item.notes.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Image(systemName: "note.text")
+                                .foregroundColor(Theme.Colors.butterYellow)
                             Text("Notes")
-                                .font(.headline)
-                            Text(item.notes)
-                                .font(.body)
+                                .font(Theme.Fonts.cosyHeadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
                         }
+                        Text(item.notes)
+                            .font(Theme.Fonts.cosyBody())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
                     }
+                    .padding(Theme.Spacing.medium)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.Colors.butterYellow.opacity(0.2))
+                    .cornerRadius(Theme.CornerRadius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                            .stroke(Theme.Colors.butterYellow, lineWidth: Theme.BorderWidth.thick)
+                    )
                 }
 
                 Spacer()
             }
-            .padding()
+            .padding(Theme.Spacing.large)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Colors.cloudWhite)
+            .cornerRadius(Theme.CornerRadius.xl)
+            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                    .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
+            )
+            .padding(Theme.Spacing.medium)
         }
+        .cosyGradientBackground()
         .navigationTitle(item.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") {
-                    showingEditSheet = true
+                Button(action: { showingEditSheet = true }) {
+                    Text("Edit")
+                        .font(Theme.Fonts.cosyButton())
+                        .foregroundColor(.white)
+                        .padding(.horizontal, Theme.Spacing.small)
+                        .padding(.vertical, Theme.Spacing.xs)
+                        .background(Theme.Colors.blushPink)
+                        .cornerRadius(Theme.CornerRadius.xl)
                 }
+                .cosyButtonPress()
             }
         }
         .sheet(isPresented: $showingEditSheet) {
@@ -166,14 +236,19 @@ struct DetailRow: View {
 
     var body: some View {
         if !value.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(Theme.Fonts.cosyCaption())
+                    .foregroundColor(Theme.Colors.mutedPlum)
                     .textCase(.uppercase)
                 Text(value)
-                    .font(.body)
+                    .font(Theme.Fonts.cosyBody())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
             }
+            .padding(Theme.Spacing.small)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Colors.warmCream.opacity(0.5))
+            .cornerRadius(Theme.CornerRadius.small)
         }
     }
 }

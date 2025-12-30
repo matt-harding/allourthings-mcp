@@ -38,54 +38,134 @@ struct AddEditItemView: View {
 
     var body: some View {
         NavigationView {
-            Form {
-                Section("Basic Information") {
-                    TextField("Name", text: $name)
-                    TextField("Manufacturer", text: $manufacturer)
-                    TextField("Model Number", text: $modelNumber)
-                    TextField("Category", text: $category)
-                    TextField("Location", text: $location)
-                }
+            ScrollView {
+                VStack(spacing: Theme.Spacing.medium) {
+                    // Basic Information Section
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Basic Information")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .padding(.horizontal, Theme.Spacing.medium)
 
-                Section("Dates") {
-                    HStack {
-                        Text("Purchase Date")
-                        Spacer()
-                        if let purchaseDate = purchaseDate {
-                            Text(purchaseDate.formatted(date: .abbreviated, time: .omitted))
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("Not set")
-                                .foregroundColor(.secondary)
+                        VStack(spacing: Theme.Spacing.xs) {
+                            CozyTextField(placeholder: "Name", text: $name)
+                            CozyTextField(placeholder: "Manufacturer", text: $manufacturer)
+                            CozyTextField(placeholder: "Model Number", text: $modelNumber)
+                            CozyTextField(placeholder: "Category", text: $category)
+                            CozyTextField(placeholder: "Location", text: $location)
                         }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        showingPurchaseDatePicker = true
+                        .padding(Theme.Spacing.medium)
+                        .background(Theme.Colors.cloudWhite)
+                        .cornerRadius(Theme.CornerRadius.large)
+                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                        )
                     }
 
-                    HStack {
-                        Text("Warranty Expires")
-                        Spacer()
-                        if let warrantyDate = warrantyExpirationDate {
-                            Text(warrantyDate.formatted(date: .abbreviated, time: .omitted))
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("Not set")
-                                .foregroundColor(.secondary)
+                    // Dates Section
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Dates")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .padding(.horizontal, Theme.Spacing.medium)
+
+                        VStack(spacing: Theme.Spacing.xs) {
+                            // Purchase Date Row
+                            HStack {
+                                Image(systemName: "calendar.circle.fill")
+                                    .foregroundColor(Theme.Colors.blushPink)
+                                Text("Purchase Date")
+                                    .font(Theme.Fonts.cosyBody())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                Spacer()
+                                if let purchaseDate = purchaseDate {
+                                    Text(purchaseDate.formatted(date: .abbreviated, time: .omitted))
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.softGray)
+                                } else {
+                                    Text("Not set")
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.softGray)
+                                }
+                            }
+                            .padding(Theme.Spacing.small)
+                            .background(Theme.Colors.warmCream)
+                            .cornerRadius(Theme.CornerRadius.medium)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                showingPurchaseDatePicker = true
+                            }
+
+                            // Warranty Date Row
+                            HStack {
+                                Image(systemName: "calendar.circle.fill")
+                                    .foregroundColor(Theme.Colors.blushPink)
+                                Text("Warranty Expires")
+                                    .font(Theme.Fonts.cosyBody())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                Spacer()
+                                if let warrantyDate = warrantyExpirationDate {
+                                    Text(warrantyDate.formatted(date: .abbreviated, time: .omitted))
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.softGray)
+                                } else {
+                                    Text("Not set")
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.softGray)
+                                }
+                            }
+                            .padding(Theme.Spacing.small)
+                            .background(Theme.Colors.warmCream)
+                            .cornerRadius(Theme.CornerRadius.medium)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                showingWarrantyDatePicker = true
+                            }
                         }
+                        .padding(Theme.Spacing.medium)
+                        .background(Theme.Colors.cloudWhite)
+                        .cornerRadius(Theme.CornerRadius.large)
+                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                        )
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        showingWarrantyDatePicker = true
-                    }
-                }
 
-                Section("Notes") {
-                    TextField("Additional notes...", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                    // Notes Section
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Notes")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .padding(.horizontal, Theme.Spacing.medium)
+
+                        TextField("Additional notes...", text: $notes, axis: .vertical)
+                            .font(Theme.Fonts.cosyBody())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
+                            .padding(Theme.Spacing.small)
+                            .background(Theme.Colors.butterYellow.opacity(0.1))
+                            .cornerRadius(Theme.CornerRadius.medium)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .stroke(Theme.Colors.butterYellow.opacity(0.3), lineWidth: Theme.BorderWidth.standard)
+                            )
+                            .lineLimit(4...8)
+                            .frame(minHeight: 80)
+                            .padding(Theme.Spacing.medium)
+                            .background(Theme.Colors.cloudWhite)
+                            .cornerRadius(Theme.CornerRadius.large)
+                            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                    .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                            )
+                    }
                 }
+                .padding(Theme.Spacing.medium)
             }
+            .cosyGradientBackground()
             .navigationTitle(isEditing ? "Edit Item" : "Add Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -93,22 +173,37 @@ struct AddEditItemView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(Theme.Colors.mutedPlum)
+                    .font(Theme.Fonts.cosyBody())
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveItem()
+                    Button(action: { saveItem() }) {
+                        Text("Save")
+                            .font(Theme.Fonts.cosyButton())
+                            .foregroundColor(name.isEmpty ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
+                            .padding(.horizontal, Theme.Spacing.small)
+                            .padding(.vertical, Theme.Spacing.xs)
+                            .background(name.isEmpty ? Theme.Colors.softGray.opacity(0.3) : Theme.Colors.mintGreen)
+                            .cornerRadius(Theme.CornerRadius.xl)
                     }
                     .disabled(name.isEmpty)
+                    .cosyButtonPress()
                 }
             }
             .sheet(isPresented: $showingPurchaseDatePicker) {
                 NavigationView {
-                    DatePicker("Purchase Date", selection: Binding(
-                        get: { purchaseDate ?? Date() },
-                        set: { purchaseDate = $0 }
-                    ), displayedComponents: .date)
-                    .datePickerStyle(.wheel)
+                    VStack {
+                        DatePicker("Purchase Date", selection: Binding(
+                            get: { purchaseDate ?? Date() },
+                            set: { purchaseDate = $0 }
+                        ), displayedComponents: .date)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .tint(Theme.Colors.blushPink)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.Colors.warmCream)
                     .navigationTitle("Purchase Date")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -117,22 +212,32 @@ struct AddEditItemView: View {
                                 purchaseDate = nil
                                 showingPurchaseDatePicker = false
                             }
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .font(Theme.Fonts.cosyBody())
                         }
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") {
                                 showingPurchaseDatePicker = false
                             }
+                            .foregroundColor(Theme.Colors.blushPink)
+                            .font(Theme.Fonts.cosyButton())
                         }
                     }
                 }
             }
             .sheet(isPresented: $showingWarrantyDatePicker) {
                 NavigationView {
-                    DatePicker("Warranty Expiration", selection: Binding(
-                        get: { warrantyExpirationDate ?? Date() },
-                        set: { warrantyExpirationDate = $0 }
-                    ), displayedComponents: .date)
-                    .datePickerStyle(.wheel)
+                    VStack {
+                        DatePicker("Warranty Expiration", selection: Binding(
+                            get: { warrantyExpirationDate ?? Date() },
+                            set: { warrantyExpirationDate = $0 }
+                        ), displayedComponents: .date)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .tint(Theme.Colors.blushPink)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.Colors.warmCream)
                     .navigationTitle("Warranty Expiration")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -141,11 +246,15 @@ struct AddEditItemView: View {
                                 warrantyExpirationDate = nil
                                 showingWarrantyDatePicker = false
                             }
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .font(Theme.Fonts.cosyBody())
                         }
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") {
                                 showingWarrantyDatePicker = false
                             }
+                            .foregroundColor(Theme.Colors.blushPink)
+                            .font(Theme.Fonts.cosyButton())
                         }
                     }
                 }
