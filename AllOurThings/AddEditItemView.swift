@@ -20,6 +20,7 @@ struct AddEditItemView: View {
     // Manual/PDF fields
     @State private var manualText: String?
     @State private var manualFileName: String?
+    @State private var manualFilePath: String?
     @State private var showingDocumentPicker = false
     @State private var isProcessingPDF = false
     @State private var pdfStats: ExtractionStats?
@@ -43,6 +44,7 @@ struct AddEditItemView: View {
             _warrantyExpirationDate = State(initialValue: item.warrantyExpirationDate)
             _manualText = State(initialValue: item.manualText)
             _manualFileName = State(initialValue: item.manualFileName)
+            _manualFilePath = State(initialValue: item.manualFilePath)
         }
     }
 
@@ -349,25 +351,49 @@ struct AddEditItemView: View {
         isProcessingPDF = true
 
         Task {
-            if let result = PDFTextExtractor.shared.extractEnglishText(from: url) {
-                await MainActor.run {
-                    manualText = result.text
-                    manualFileName = PDFTextExtractor.shared.getFileName(from: url)
-                    pdfStats = result.stats
-                    isProcessingPDF = false
-                }
-            } else {
+            // First, save the PDF file
+            guard let savedPath = PDFStorageHelper.shared.savePDF(from: url) else {
                 await MainActor.run {
                     isProcessingPDF = false
                     // Could show error alert here
                 }
+                return
+            }
+
+            // Then extract text from the saved PDF
+            guard let savedURL = PDFStorageHelper.shared.getPDFURL(for: savedPath),
+                  let result = PDFTextExtractor.shared.extractEnglishText(from: savedURL) else {
+                await MainActor.run {
+                    isProcessingPDF = false
+                    // Could show error alert here
+                }
+                return
+            }
+
+            await MainActor.run {
+                // Delete old PDF if replacing
+                if let oldPath = manualFilePath {
+                    PDFStorageHelper.shared.deletePDF(at: oldPath)
+                }
+
+                manualText = result.text
+                manualFileName = PDFTextExtractor.shared.getFileName(from: url)
+                manualFilePath = savedPath
+                pdfStats = result.stats
+                isProcessingPDF = false
             }
         }
     }
 
     private func removeManual() {
+        // Delete the PDF file
+        if let filePath = manualFilePath {
+            PDFStorageHelper.shared.deletePDF(at: filePath)
+        }
+
         manualText = nil
         manualFileName = nil
+        manualFilePath = nil
         pdfStats = nil
     }
 
@@ -384,6 +410,7 @@ struct AddEditItemView: View {
             item.warrantyExpirationDate = warrantyExpirationDate
             item.manualText = manualText
             item.manualFileName = manualFileName
+            item.manualFilePath = manualFilePath
         } else {
             // Create new item
             let newItem = Item(
@@ -396,7 +423,8 @@ struct AddEditItemView: View {
                 location: location,
                 notes: notes,
                 manualText: manualText,
-                manualFileName: manualFileName
+                manualFileName: manualFileName,
+                manualFilePath: manualFilePath
             )
             modelContext.insert(newItem)
         }

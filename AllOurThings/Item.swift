@@ -23,8 +23,9 @@ final class Item {
     // Manual/Documentation fields
     var manualText: String?
     var manualFileName: String?
+    var manualFilePath: String?
 
-    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil) {
+    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil) {
         self.name = name
         self.manufacturer = manufacturer
         self.modelNumber = modelNumber
@@ -35,6 +36,7 @@ final class Item {
         self.notes = notes
         self.manualText = manualText
         self.manualFileName = manualFileName
+        self.manualFilePath = manualFilePath
         self.timestamp = Date()
     }
 }

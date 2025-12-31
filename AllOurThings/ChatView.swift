@@ -10,6 +10,10 @@ struct ChatView: View {
     @State private var isLoading = false
     @State private var hasAPIKey = false
     @State private var showingSettings = false
+    @State private var showingPDF = false
+    @State private var selectedPDFPath: String?
+    @State private var selectedPageNumber: Int?
+    @State private var selectedItemName: String?
 
     var body: some View {
         NavigationView {
@@ -132,9 +136,13 @@ struct ChatView: View {
                                                     .font(.system(size: 20))
                                                     .foregroundColor(Theme.Colors.peach)
 
-                                                Text(response.answer)
+                                                Text(parseCitations(response.answer, itemsWithManuals: response.itemsWithManuals))
                                                     .font(Theme.Fonts.cosyBody())
                                                     .foregroundColor(Theme.Colors.cocoaBrown)
+                                                    .environment(\.openURL, OpenURLAction { url in
+                                                        handleCitationTap(url: url, itemsWithManuals: response.itemsWithManuals)
+                                                        return .handled
+                                                    })
                                             }
                                             .padding(Theme.Spacing.small)
                                             .background(Theme.Colors.cloudWhite)
@@ -220,6 +228,15 @@ struct ChatView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showingPDF) {
+                if let pdfPath = selectedPDFPath, let itemName = selectedItemName {
+                    PDFViewerView(
+                        pdfPath: pdfPath,
+                        pageNumber: selectedPageNumber,
+                        itemName: itemName
+                    )
+                }
+            }
             .onAppear {
                 checkAPIKey()
             }
@@ -233,10 +250,20 @@ struct ChatView: View {
         let question = questionText.trimmingCharacters(in: .whitespacesAndNewlines)
         questionText = ""
 
+        // Collect items with manuals
+        let manualsRefs = items.compactMap { item -> ItemManualReference? in
+            guard let filePath = item.manualFilePath else { return nil }
+            return ItemManualReference(itemName: item.name, manualFilePath: filePath)
+        }
+
         Task {
             let answer = await generateAnswer(for: question)
             await MainActor.run {
-                let response = QuestionResponse(question: question, answer: answer)
+                let response = QuestionResponse(
+                    question: question,
+                    answer: answer,
+                    itemsWithManuals: manualsRefs
+                )
                 responses.append(response)
                 isLoading = false
             }
@@ -261,7 +288,14 @@ struct ChatView: View {
 
         Please provide a helpful, concise answer based on their actual items. If you need to reference specific items, use their exact names. Keep responses friendly and informative.
 
-        IMPORTANT: Some items include detailed manual documentation. When answering questions about specific items, prioritize information from the manual documentation over general knowledge. If manual documentation is available for an item, cite it as the source of your answer.
+        IMPORTANT: Some items include detailed manual documentation with page numbers (e.g., "Page 5:"). When answering questions using information from the manual:
+        1. Cite the page number inline using the format: (page X)
+        2. Place the citation immediately after the relevant information
+        3. Example: "The recommended temperature is 60°C (page 12)."
+        4. Always cite specific page numbers when available in the manual text
+        5. If information spans multiple pages, cite all relevant pages: (pages 5-7)
+
+        Prioritize information from manual documentation over general knowledge when available.
         """
 
         do {
@@ -270,6 +304,59 @@ struct ChatView: View {
         } catch {
             return "Sorry, I couldn't process your question. Error: \(error.localizedDescription)"
         }
+    }
+
+    private func parseCitations(_ text: String, itemsWithManuals: [ItemManualReference]) -> AttributedString {
+        var attributedString = AttributedString(text)
+
+        // Pattern to match (page X) or (pages X-Y) or (page X-Y)
+        let pattern = "\\(pages? (\\d+)(?:-(\\d+))?\\)"
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return attributedString
+        }
+
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+
+        // Process matches in reverse to maintain correct indices
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: text) else { continue }
+
+            // Extract page number
+            let citationText = String(text[range])
+            let pageNumberRange = match.range(at: 1)
+            guard let pageRange = Range(pageNumberRange, in: text) else { continue }
+            let pageNumber = String(text[pageRange])
+
+            // Create link URL with custom scheme
+            if let attrRange = Range(range, in: attributedString) {
+                attributedString[attrRange].foregroundColor = Theme.Colors.blushPink
+                attributedString[attrRange].underlineStyle = .single
+                attributedString[attrRange].link = URL(string: "manual://page/\(pageNumber)")
+            }
+        }
+
+        return attributedString
+    }
+
+    private func handleCitationTap(url: URL, itemsWithManuals: [ItemManualReference]) {
+        guard url.scheme == "manual",
+              url.host == "page",
+              let pageString = url.pathComponents.last,
+              let pageNumber = Int(pageString) else {
+            return
+        }
+
+        // If only one manual, open it directly
+        guard let firstManual = itemsWithManuals.first else {
+            print("No manuals available")
+            return
+        }
+
+        selectedPDFPath = firstManual.manualFilePath
+        selectedPageNumber = pageNumber
+        selectedItemName = firstManual.itemName
+        showingPDF = true
     }
 
     private func buildItemsContext() -> String {
@@ -307,4 +394,10 @@ struct QuestionResponse: Identifiable {
     let question: String
     let answer: String
     let timestamp = Date()
+    let itemsWithManuals: [ItemManualReference]
+}
+
+struct ItemManualReference {
+    let itemName: String
+    let manualFilePath: String
 }

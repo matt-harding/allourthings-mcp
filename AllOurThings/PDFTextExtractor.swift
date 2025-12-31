@@ -36,7 +36,10 @@ class PDFTextExtractor {
             let language = detectLanguage(of: pageText)
 
             if language == .english {
-                englishPages.append(pageText)
+                // Include page number with the text
+                let pageNumber = pageIndex + 1
+                let pageWithNumber = "Page \(pageNumber):\n\(pageText)"
+                englishPages.append(pageWithNumber)
                 stats.englishPages += 1
                 print("✅ Page \(pageIndex + 1): English")
             } else {
