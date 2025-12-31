@@ -260,6 +260,8 @@ struct ChatView: View {
         User question: \(question)
 
         Please provide a helpful, concise answer based on their actual items. If you need to reference specific items, use their exact names. Keep responses friendly and informative.
+
+        IMPORTANT: Some items include detailed manual documentation. When answering questions about specific items, prioritize information from the manual documentation over general knowledge. If manual documentation is available for an item, cite it as the source of your answer.
         """
 
         do {
@@ -291,6 +293,9 @@ struct ChatView: View {
             }
             if !item.notes.isEmpty {
                 itemInfo += " (Notes: \(item.notes))"
+            }
+            if let manualText = item.manualText, !manualText.isEmpty {
+                itemInfo += "\n  Manual documentation:\n\(manualText)"
             }
             return itemInfo
         }.joined(separator: "\n")

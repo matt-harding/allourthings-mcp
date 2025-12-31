@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct AddEditItemView: View {
     @Environment(\.modelContext) private var modelContext
@@ -15,6 +16,13 @@ struct AddEditItemView: View {
     @State private var warrantyExpirationDate: Date?
     @State private var showingPurchaseDatePicker = false
     @State private var showingWarrantyDatePicker = false
+
+    // Manual/PDF fields
+    @State private var manualText: String?
+    @State private var manualFileName: String?
+    @State private var showingDocumentPicker = false
+    @State private var isProcessingPDF = false
+    @State private var pdfStats: ExtractionStats?
 
     let item: Item?
 
@@ -33,6 +41,8 @@ struct AddEditItemView: View {
             _notes = State(initialValue: item.notes)
             _purchaseDate = State(initialValue: item.purchaseDate)
             _warrantyExpirationDate = State(initialValue: item.warrantyExpirationDate)
+            _manualText = State(initialValue: item.manualText)
+            _manualFileName = State(initialValue: item.manualFileName)
         }
     }
 
@@ -162,6 +172,76 @@ struct AddEditItemView: View {
                                     .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
                             )
                     }
+
+                    // Manual Section
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Manual")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .padding(.horizontal, Theme.Spacing.medium)
+
+                        VStack(spacing: Theme.Spacing.xs) {
+                            if let fileName = manualFileName {
+                                // Show attached manual
+                                HStack {
+                                    Image(systemName: "doc.text.fill")
+                                        .foregroundColor(Theme.Colors.mintGreen)
+                                    Text(fileName)
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Button(action: removeManual) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(Theme.Colors.peach)
+                                    }
+                                }
+                                .padding(Theme.Spacing.small)
+                                .background(Theme.Colors.mintGreen.opacity(0.1))
+                                .cornerRadius(Theme.CornerRadius.medium)
+
+                                if let stats = pdfStats {
+                                    Text(stats.summary)
+                                        .font(Theme.Fonts.cosyCaption())
+                                        .foregroundColor(Theme.Colors.softGray)
+                                        .padding(.horizontal, Theme.Spacing.small)
+                                }
+                            }
+
+                            // Upload button
+                            Button(action: { showingDocumentPicker = true }) {
+                                HStack {
+                                    if isProcessingPDF {
+                                        ProgressView()
+                                            .tint(Theme.Colors.cocoaBrown)
+                                        Text("Processing PDF...")
+                                    } else {
+                                        Image(systemName: manualFileName == nil ? "doc.badge.plus" : "arrow.triangle.2.circlepath")
+                                        Text(manualFileName == nil ? "Attach Manual (PDF)" : "Replace Manual")
+                                    }
+                                }
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .frame(maxWidth: .infinity)
+                                .padding(Theme.Spacing.small)
+                                .background(Theme.Colors.warmCream)
+                                .cornerRadius(Theme.CornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                        .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                )
+                            }
+                            .disabled(isProcessingPDF)
+                        }
+                        .padding(Theme.Spacing.medium)
+                        .background(Theme.Colors.cloudWhite)
+                        .cornerRadius(Theme.CornerRadius.large)
+                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                        )
+                    }
                 }
                 .padding(Theme.Spacing.medium)
             }
@@ -259,7 +339,36 @@ struct AddEditItemView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingDocumentPicker) {
+                DocumentPicker(onDocumentPicked: handleDocumentPicked)
+            }
         }
+    }
+
+    private func handleDocumentPicked(_ url: URL) {
+        isProcessingPDF = true
+
+        Task {
+            if let result = PDFTextExtractor.shared.extractEnglishText(from: url) {
+                await MainActor.run {
+                    manualText = result.text
+                    manualFileName = PDFTextExtractor.shared.getFileName(from: url)
+                    pdfStats = result.stats
+                    isProcessingPDF = false
+                }
+            } else {
+                await MainActor.run {
+                    isProcessingPDF = false
+                    // Could show error alert here
+                }
+            }
+        }
+    }
+
+    private func removeManual() {
+        manualText = nil
+        manualFileName = nil
+        pdfStats = nil
     }
 
     private func saveItem() {
@@ -273,6 +382,8 @@ struct AddEditItemView: View {
             item.notes = notes
             item.purchaseDate = purchaseDate
             item.warrantyExpirationDate = warrantyExpirationDate
+            item.manualText = manualText
+            item.manualFileName = manualFileName
         } else {
             // Create new item
             let newItem = Item(
@@ -283,7 +394,9 @@ struct AddEditItemView: View {
                 purchaseDate: purchaseDate,
                 warrantyExpirationDate: warrantyExpirationDate,
                 location: location,
-                notes: notes
+                notes: notes,
+                manualText: manualText,
+                manualFileName: manualFileName
             )
             modelContext.insert(newItem)
         }

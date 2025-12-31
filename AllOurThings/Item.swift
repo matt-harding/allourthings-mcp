@@ -20,7 +20,11 @@ final class Item {
     var notes: String
     var timestamp: Date
 
-    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "") {
+    // Manual/Documentation fields
+    var manualText: String?
+    var manualFileName: String?
+
+    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil) {
         self.name = name
         self.manufacturer = manufacturer
         self.modelNumber = modelNumber
@@ -29,6 +33,8 @@ final class Item {
         self.warrantyExpirationDate = warrantyExpirationDate
         self.location = location
         self.notes = notes
+        self.manualText = manualText
+        self.manualFileName = manualFileName
         self.timestamp = Date()
     }
 }
