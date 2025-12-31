@@ -10,10 +10,7 @@ struct ChatView: View {
     @State private var isLoading = false
     @State private var hasAPIKey = false
     @State private var showingSettings = false
-    @State private var showingPDF = false
-    @State private var selectedPDFPath: String?
-    @State private var selectedPageNumber: Int?
-    @State private var selectedItemName: String?
+    @State private var pdfToShow: PDFViewerData?
 
     var body: some View {
         NavigationView {
@@ -228,14 +225,12 @@ struct ChatView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
-            .sheet(isPresented: $showingPDF) {
-                if let pdfPath = selectedPDFPath, let itemName = selectedItemName {
-                    PDFViewerView(
-                        pdfPath: pdfPath,
-                        pageNumber: selectedPageNumber,
-                        itemName: itemName
-                    )
-                }
+            .sheet(item: $pdfToShow) { pdfData in
+                PDFViewerView(
+                    pdfPath: pdfData.pdfPath,
+                    pageNumber: pdfData.pageNumber,
+                    itemName: pdfData.itemName
+                )
             }
             .onAppear {
                 checkAPIKey()
@@ -323,7 +318,6 @@ struct ChatView: View {
             guard let range = Range(match.range, in: text) else { continue }
 
             // Extract page number
-            let citationText = String(text[range])
             let pageNumberRange = match.range(at: 1)
             guard let pageRange = Range(pageNumberRange, in: text) else { continue }
             let pageNumber = String(text[pageRange])
@@ -349,14 +343,15 @@ struct ChatView: View {
 
         // If only one manual, open it directly
         guard let firstManual = itemsWithManuals.first else {
-            print("No manuals available")
             return
         }
 
-        selectedPDFPath = firstManual.manualFilePath
-        selectedPageNumber = pageNumber
-        selectedItemName = firstManual.itemName
-        showingPDF = true
+        // Create PDF viewer data and present
+        pdfToShow = PDFViewerData(
+            pdfPath: firstManual.manualFilePath,
+            pageNumber: pageNumber,
+            itemName: firstManual.itemName
+        )
     }
 
     private func buildItemsContext() -> String {
@@ -400,4 +395,11 @@ struct QuestionResponse: Identifiable {
 struct ItemManualReference {
     let itemName: String
     let manualFilePath: String
+}
+
+struct PDFViewerData: Identifiable {
+    let id = UUID()
+    let pdfPath: String
+    let pageNumber: Int?
+    let itemName: String
 }

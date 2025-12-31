@@ -61,15 +61,21 @@ struct PDFKitView: UIViewRepresentable {
     }
 
     func updateUIView(_ pdfView: PDFView, context: Context) {
-        if let document = PDFDocument(url: url) {
-            pdfView.document = document
+        // Only set document if it's not already set or if it's different
+        if pdfView.document?.documentURL != url {
+            if let document = PDFDocument(url: url) {
+                pdfView.document = document
 
-            // Navigate to specific page if provided
-            if let pageNum = pageNumber, pageNum > 0 {
-                let pageIndex = pageNum - 1 // Convert to 0-based index
-                if pageIndex < document.pageCount,
-                   let page = document.page(at: pageIndex) {
-                    pdfView.go(to: page)
+                // Navigate to specific page after a small delay to ensure PDF is rendered
+                if let pageNum = pageNumber, pageNum > 0 {
+                    let pageIndex = pageNum - 1 // Convert to 0-based index
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if pageIndex < document.pageCount,
+                           let page = document.page(at: pageIndex) {
+                            pdfView.go(to: page)
+                        }
+                    }
                 }
             }
         }

@@ -22,9 +22,7 @@ class PDFStorageHelper {
         if !fileManager.fileExists(atPath: manualsDirectory.path) {
             do {
                 try fileManager.createDirectory(at: manualsDirectory, withIntermediateDirectories: true)
-                print("Created Manuals directory at: \(manualsDirectory.path)")
             } catch {
-                print("Failed to create Manuals directory: \(error)")
                 return nil
             }
         }
@@ -56,12 +54,10 @@ class PDFStorageHelper {
 
             // Copy file to manuals directory
             try fileManager.copyItem(at: sourceURL, to: destinationURL)
-            print("PDF saved to: \(destinationURL.path)")
 
             // Return relative path (just the filename)
             return fileName
         } catch {
-            print("Failed to save PDF: \(error)")
             return nil
         }
     }
@@ -76,7 +72,6 @@ class PDFStorageHelper {
         let pdfURL = manualsDirectory.appendingPathComponent(relativePath)
 
         guard fileManager.fileExists(atPath: pdfURL.path) else {
-            print("PDF not found at: \(pdfURL.path)")
             return nil
         }
 
@@ -92,9 +87,8 @@ class PDFStorageHelper {
 
         do {
             try fileManager.removeItem(at: pdfURL)
-            print("Deleted PDF at: \(pdfURL.path)")
         } catch {
-            print("Failed to delete PDF: \(error)")
+            // Silently fail - file might already be deleted
         }
     }
 }
