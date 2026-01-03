@@ -74,16 +74,27 @@ struct ItemRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Placeholder Image Section
+            // Image Section (pixel art or placeholder)
             ZStack {
-                // Background with category color
-                Theme.Colors.categoryColor(for: item.category)
-                    .opacity(0.2)
+                if let imageData = item.pixelArtImageData,
+                   let uiImage = UIImage(data: imageData) {
+                    // Show pixel art image
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 120)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                } else {
+                    // Placeholder with category color
+                    Theme.Colors.categoryColor(for: item.category)
+                        .opacity(0.2)
 
-                // Placeholder icon
-                Image(systemName: "cube.box.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(Theme.Colors.categoryColor(for: item.category).opacity(0.4))
+                    // Placeholder icon
+                    Image(systemName: "cube.box.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(Theme.Colors.categoryColor(for: item.category).opacity(0.4))
+                }
 
                 // Category badge in corner
                 if !item.category.isEmpty {
@@ -153,6 +164,31 @@ struct ItemDetailView: View {
                             .font(Theme.Fonts.cosyLargeTitle())
                             .foregroundColor(Theme.Colors.categoryColor(for: item.category))
                     }
+                }
+
+                // Pixel Art Image Section
+                if let imageData = item.pixelArtImageData,
+                   let uiImage = UIImage(data: imageData) {
+                    VStack(spacing: 0) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .cornerRadius(Theme.CornerRadius.large)
+                            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                    .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
+                            )
+                    }
+                    .padding(Theme.Spacing.medium)
+                    .background(Theme.Colors.cloudWhite)
+                    .cornerRadius(Theme.CornerRadius.xl)
+                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                            .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
+                    )
                 }
 
                 // Details Section

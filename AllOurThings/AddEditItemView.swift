@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import PhotosUI
 
 struct AddEditItemView: View {
     @Environment(\.modelContext) private var modelContext
@@ -25,6 +26,14 @@ struct AddEditItemView: View {
     @State private var isProcessingPDF = false
     @State private var pdfStats: ExtractionStats?
 
+    // Pixel Art Image fields
+    @State private var pixelArtImageData: Data?
+    @State private var pixelArtFileName: String?
+    @State private var pixelArtFilePath: String?
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isGeneratingPixelArt = false
+    @State private var pixelArtError: String?
+
     let item: Item?
 
     var isEditing: Bool {
@@ -45,6 +54,9 @@ struct AddEditItemView: View {
             _manualText = State(initialValue: item.manualText)
             _manualFileName = State(initialValue: item.manualFileName)
             _manualFilePath = State(initialValue: item.manualFilePath)
+            _pixelArtImageData = State(initialValue: item.pixelArtImageData)
+            _pixelArtFileName = State(initialValue: item.pixelArtFileName)
+            _pixelArtFilePath = State(initialValue: item.pixelArtFilePath)
         }
     }
 
@@ -244,6 +256,101 @@ struct AddEditItemView: View {
                                 .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
                         )
                     }
+
+                    // Photo Section
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Photo")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .padding(.horizontal, Theme.Spacing.medium)
+
+                        VStack(spacing: Theme.Spacing.xs) {
+                            // Show pixel art preview if available
+                            if let imageData = pixelArtImageData,
+                               let uiImage = UIImage(data: imageData) {
+                                VStack(spacing: Theme.Spacing.xs) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(maxHeight: 200)
+                                        .cornerRadius(Theme.CornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                        )
+
+                                    if let fileName = pixelArtFileName {
+                                        HStack {
+                                            Image(systemName: "photo.fill")
+                                                .foregroundColor(Theme.Colors.softLavender)
+                                            Text(fileName)
+                                                .font(Theme.Fonts.cosyCaption())
+                                                .foregroundColor(Theme.Colors.softGray)
+                                                .lineLimit(1)
+                                            Spacer()
+                                            Button(action: removePixelArt) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(Theme.Colors.peach)
+                                            }
+                                        }
+                                        .padding(.horizontal, Theme.Spacing.small)
+                                    }
+                                }
+                            }
+
+                            // Show error if generation failed
+                            if let error = pixelArtError {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(Theme.Colors.peach)
+                                    Text(error)
+                                        .font(Theme.Fonts.cosyCaption())
+                                        .foregroundColor(Theme.Colors.peach)
+                                }
+                                .padding(Theme.Spacing.small)
+                                .background(Theme.Colors.peach.opacity(0.1))
+                                .cornerRadius(Theme.CornerRadius.medium)
+                            }
+
+                            // PhotosPicker button
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                HStack {
+                                    if isGeneratingPixelArt {
+                                        ProgressView()
+                                            .tint(Theme.Colors.cocoaBrown)
+                                        Text("Generating Pixel Art...")
+                                    } else {
+                                        Image(systemName: pixelArtImageData == nil ? "photo.badge.plus" : "arrow.triangle.2.circlepath")
+                                        Text(pixelArtImageData == nil ? "Add Photo" : "Replace Photo")
+                                    }
+                                }
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .frame(maxWidth: .infinity)
+                                .padding(Theme.Spacing.small)
+                                .background(Theme.Colors.warmCream)
+                                .cornerRadius(Theme.CornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                        .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                )
+                            }
+                            .disabled(isGeneratingPixelArt)
+                            .onChange(of: selectedPhotoItem) { _, newItem in
+                                Task {
+                                    await handlePhotoSelection(newItem)
+                                }
+                            }
+                        }
+                        .padding(Theme.Spacing.medium)
+                        .background(Theme.Colors.cloudWhite)
+                        .cornerRadius(Theme.CornerRadius.large)
+                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                        )
+                    }
                 }
                 .padding(Theme.Spacing.medium)
             }
@@ -397,6 +504,84 @@ struct AddEditItemView: View {
         pdfStats = nil
     }
 
+    // MARK: - Photo Handling
+
+    private func handlePhotoSelection(_ photoItem: PhotosPickerItem?) async {
+        guard let photoItem = photoItem else { return }
+
+        await MainActor.run {
+            isGeneratingPixelArt = true
+            pixelArtError = nil
+        }
+
+        do {
+            // Load image data from PhotosPickerItem
+            guard let imageData = try await photoItem.loadTransferable(type: Data.self) else {
+                await MainActor.run {
+                    pixelArtError = "Failed to load image"
+                    isGeneratingPixelArt = false
+                }
+                return
+            }
+
+            // Convert to pixel art using local processor (runs on background thread)
+            let pixelArtData = await Task.detached {
+                PixelArtProcessor.shared.convertToPixelArt(imageData: imageData)
+            }.value
+
+            guard let pixelArtData = pixelArtData else {
+                await MainActor.run {
+                    pixelArtError = "Failed to convert to pixel art"
+                    isGeneratingPixelArt = false
+                }
+                return
+            }
+
+            // Save to disk
+            let originalFileName = "photo_\(Date().timeIntervalSince1970).png"
+            guard let savedPath = ImageStorageHelper.shared.saveImage(pixelArtData, originalFileName: originalFileName) else {
+                await MainActor.run {
+                    pixelArtError = "Failed to save pixel art"
+                    isGeneratingPixelArt = false
+                }
+                return
+            }
+
+            await MainActor.run {
+                // Delete old image if replacing
+                if let oldPath = pixelArtFilePath {
+                    ImageStorageHelper.shared.deleteImage(at: oldPath)
+                }
+
+                // Update state
+                pixelArtImageData = pixelArtData
+                pixelArtFileName = originalFileName
+                pixelArtFilePath = savedPath
+                isGeneratingPixelArt = false
+                selectedPhotoItem = nil
+            }
+
+        } catch {
+            await MainActor.run {
+                pixelArtError = "An unexpected error occurred"
+                isGeneratingPixelArt = false
+                selectedPhotoItem = nil
+            }
+        }
+    }
+
+    private func removePixelArt() {
+        // Delete the image file
+        if let filePath = pixelArtFilePath {
+            ImageStorageHelper.shared.deleteImage(at: filePath)
+        }
+
+        pixelArtImageData = nil
+        pixelArtFileName = nil
+        pixelArtFilePath = nil
+        pixelArtError = nil
+    }
+
     private func saveItem() {
         if let item = item {
             // Edit existing item
@@ -411,6 +596,9 @@ struct AddEditItemView: View {
             item.manualText = manualText
             item.manualFileName = manualFileName
             item.manualFilePath = manualFilePath
+            item.pixelArtImageData = pixelArtImageData
+            item.pixelArtFileName = pixelArtFileName
+            item.pixelArtFilePath = pixelArtFilePath
         } else {
             // Create new item
             let newItem = Item(
@@ -424,7 +612,10 @@ struct AddEditItemView: View {
                 notes: notes,
                 manualText: manualText,
                 manualFileName: manualFileName,
-                manualFilePath: manualFilePath
+                manualFilePath: manualFilePath,
+                pixelArtImageData: pixelArtImageData,
+                pixelArtFileName: pixelArtFileName,
+                pixelArtFilePath: pixelArtFilePath
             )
             modelContext.insert(newItem)
         }

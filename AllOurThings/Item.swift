@@ -25,7 +25,12 @@ final class Item {
     var manualFileName: String?
     var manualFilePath: String?
 
-    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil) {
+    // Pixel Art Image fields
+    var pixelArtImageData: Data?
+    var pixelArtFileName: String?
+    var pixelArtFilePath: String?
+
+    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, pixelArtImageData: Data? = nil, pixelArtFileName: String? = nil, pixelArtFilePath: String? = nil) {
         self.name = name
         self.manufacturer = manufacturer
         self.modelNumber = modelNumber
@@ -37,6 +42,9 @@ final class Item {
         self.manualText = manualText
         self.manualFileName = manualFileName
         self.manualFilePath = manualFilePath
+        self.pixelArtImageData = pixelArtImageData
+        self.pixelArtFileName = pixelArtFileName
+        self.pixelArtFilePath = pixelArtFilePath
         self.timestamp = Date()
     }
 }
