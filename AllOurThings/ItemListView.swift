@@ -22,6 +22,13 @@ struct ItemListView: View {
                             ItemRowView(item: item)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .contextMenu {
+                            Button(role: .destructive, action: {
+                                deleteItem(item)
+                            }) {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
                 .padding(Theme.Spacing.xs)
@@ -29,9 +36,6 @@ struct ItemListView: View {
             .background(Theme.Colors.skyBlue)
             .navigationTitle("Items")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
                 ToolbarItem {
                     Button(action: { showingAddSheet = true }) {
                         Label("Add Item", systemImage: "plus.circle.fill")
@@ -60,10 +64,24 @@ struct ItemListView: View {
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
+    private func deleteItem(_ item: Item) {
         withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            // Delete associated files first
+            if let imagePath = item.pixelArtFilePath {
+                ImageStorageHelper.shared.deleteImage(at: imagePath)
+            }
+            if let pdfPath = item.manualFilePath {
+                PDFStorageHelper.shared.deletePDF(at: pdfPath)
+            }
+
+            // Delete the item from the model context
+            modelContext.delete(item)
+
+            // Save the context
+            do {
+                try modelContext.save()
+            } catch {
+                print("Error deleting item: \(error)")
             }
         }
     }

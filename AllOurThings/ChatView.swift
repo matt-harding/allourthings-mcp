@@ -95,6 +95,10 @@ struct ChatView: View {
                                 .padding(.horizontal, Theme.Spacing.xl)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
                     } else {
                         ScrollView {
                             LazyVStack(spacing: Theme.Spacing.medium) {
@@ -165,6 +169,7 @@ struct ChatView: View {
                             }
                             .padding(.vertical, Theme.Spacing.medium)
                         }
+                        .scrollDismissesKeyboard(.interactively)
                     }
 
                     // Input section at bottom

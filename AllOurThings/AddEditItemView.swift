@@ -33,11 +33,17 @@ struct AddEditItemView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isGeneratingPixelArt = false
     @State private var pixelArtError: String?
+    @State private var showingCamera = false
 
     let item: Item?
 
     var isEditing: Bool {
         item != nil
+    }
+
+    var isSaveDisabled: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     init(item: Item? = nil) {
@@ -71,12 +77,56 @@ struct AddEditItemView: View {
                             .foregroundColor(Theme.Colors.mutedPlum)
                             .padding(.horizontal, Theme.Spacing.medium)
 
-                        VStack(spacing: Theme.Spacing.xs) {
-                            CozyTextField(placeholder: "Name", text: $name)
-                            CozyTextField(placeholder: "Manufacturer", text: $manufacturer)
-                            CozyTextField(placeholder: "Model Number", text: $modelNumber)
-                            CozyTextField(placeholder: "Category", text: $category)
-                            CozyTextField(placeholder: "Location", text: $location)
+                        VStack(spacing: Theme.Spacing.small) {
+                            // Name field (required)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                HStack {
+                                    Text("Name")
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                    Text("*")
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.peach)
+                                }
+                                CozyTextField(placeholder: "Enter item name", text: $name)
+                            }
+
+                            // Manufacturer field (required)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                HStack {
+                                    Text("Manufacturer")
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                    Text("*")
+                                        .font(Theme.Fonts.cosySubheadline())
+                                        .foregroundColor(Theme.Colors.peach)
+                                }
+                                CozyTextField(placeholder: "Enter manufacturer name", text: $manufacturer)
+                            }
+
+                            // Serial Number field (optional)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                Text("Serial Number")
+                                    .font(Theme.Fonts.cosySubheadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                CozyTextField(placeholder: "Enter serial number (optional)", text: $modelNumber)
+                            }
+
+                            // Category field (optional)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                Text("Category")
+                                    .font(Theme.Fonts.cosySubheadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                CozyTextField(placeholder: "e.g., Electronics, Appliance", text: $category)
+                            }
+
+                            // Location field (optional)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                Text("Location")
+                                    .font(Theme.Fonts.cosySubheadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                CozyTextField(placeholder: "Where is this item stored?", text: $location)
+                            }
                         }
                         .padding(Theme.Spacing.medium)
                         .background(Theme.Colors.cloudWhite)
@@ -312,17 +362,12 @@ struct AddEditItemView: View {
                                 .cornerRadius(Theme.CornerRadius.medium)
                             }
 
-                            // PhotosPicker button
-                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            // Photo action buttons
+                            if isGeneratingPixelArt {
                                 HStack {
-                                    if isGeneratingPixelArt {
-                                        ProgressView()
-                                            .tint(Theme.Colors.cocoaBrown)
-                                        Text("Generating Pixel Art...")
-                                    } else {
-                                        Image(systemName: pixelArtImageData == nil ? "photo.badge.plus" : "arrow.triangle.2.circlepath")
-                                        Text(pixelArtImageData == nil ? "Add Photo" : "Replace Photo")
-                                    }
+                                    ProgressView()
+                                        .tint(Theme.Colors.cocoaBrown)
+                                    Text("Generating Pixel Art...")
                                 }
                                 .font(Theme.Fonts.cosyBody())
                                 .foregroundColor(Theme.Colors.cocoaBrown)
@@ -334,11 +379,48 @@ struct AddEditItemView: View {
                                     RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
                                         .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
                                 )
-                            }
-                            .disabled(isGeneratingPixelArt)
-                            .onChange(of: selectedPhotoItem) { _, newItem in
-                                Task {
-                                    await handlePhotoSelection(newItem)
+                            } else {
+                                HStack(spacing: Theme.Spacing.small) {
+                                    // Camera button
+                                    Button(action: { showingCamera = true }) {
+                                        HStack {
+                                            Image(systemName: "camera.fill")
+                                            Text("Take Photo")
+                                        }
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(Theme.Spacing.small)
+                                        .background(Theme.Colors.warmCream)
+                                        .cornerRadius(Theme.CornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                        )
+                                    }
+
+                                    // PhotosPicker button
+                                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                        HStack {
+                                            Image(systemName: "photo.on.rectangle")
+                                            Text("Choose Photo")
+                                        }
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(Theme.Spacing.small)
+                                        .background(Theme.Colors.warmCream)
+                                        .cornerRadius(Theme.CornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                        )
+                                    }
+                                    .onChange(of: selectedPhotoItem) { _, newItem in
+                                        Task {
+                                            await handlePhotoSelection(newItem)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -370,13 +452,13 @@ struct AddEditItemView: View {
                     Button(action: { saveItem() }) {
                         Text("Save")
                             .font(Theme.Fonts.cosyButton())
-                            .foregroundColor(name.isEmpty ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
+                            .foregroundColor(isSaveDisabled ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
                             .padding(.horizontal, Theme.Spacing.small)
                             .padding(.vertical, Theme.Spacing.xs)
-                            .background(name.isEmpty ? Theme.Colors.softGray.opacity(0.3) : Theme.Colors.mintGreen)
+                            .background(isSaveDisabled ? Theme.Colors.softGray.opacity(0.3) : Theme.Colors.mintGreen)
                             .cornerRadius(Theme.CornerRadius.xl)
                     }
-                    .disabled(name.isEmpty)
+                    .disabled(isSaveDisabled)
                     .cosyButtonPress()
                 }
             }
@@ -450,6 +532,9 @@ struct AddEditItemView: View {
             }
             .sheet(isPresented: $showingDocumentPicker) {
                 DocumentPicker(onDocumentPicked: handleDocumentPicked)
+            }
+            .sheet(isPresented: $showingCamera) {
+                CameraPicker(onImageCaptured: handleCameraCapture)
             }
         }
     }
@@ -582,6 +667,63 @@ struct AddEditItemView: View {
         pixelArtError = nil
     }
 
+    private func handleCameraCapture(_ image: UIImage) {
+        Task {
+            await MainActor.run {
+                isGeneratingPixelArt = true
+                pixelArtError = nil
+            }
+
+            // Fix image orientation before converting to data
+            let orientationFixedImage = image.fixedOrientation()
+
+            // Convert UIImage to Data
+            guard let imageData = orientationFixedImage.jpegData(compressionQuality: 0.8) else {
+                await MainActor.run {
+                    pixelArtError = "Failed to process camera image"
+                    isGeneratingPixelArt = false
+                }
+                return
+            }
+
+            // Convert to pixel art using local processor
+            let pixelArtData = await Task.detached {
+                PixelArtProcessor.shared.convertToPixelArt(imageData: imageData)
+            }.value
+
+            guard let pixelArtData = pixelArtData else {
+                await MainActor.run {
+                    pixelArtError = "Failed to convert to pixel art"
+                    isGeneratingPixelArt = false
+                }
+                return
+            }
+
+            // Save to disk
+            let originalFileName = "camera_\(Date().timeIntervalSince1970).png"
+            guard let savedPath = ImageStorageHelper.shared.saveImage(pixelArtData, originalFileName: originalFileName) else {
+                await MainActor.run {
+                    pixelArtError = "Failed to save pixel art"
+                    isGeneratingPixelArt = false
+                }
+                return
+            }
+
+            await MainActor.run {
+                // Delete old image if replacing
+                if let oldPath = pixelArtFilePath {
+                    ImageStorageHelper.shared.deleteImage(at: oldPath)
+                }
+
+                // Update state
+                pixelArtImageData = pixelArtData
+                pixelArtFileName = originalFileName
+                pixelArtFilePath = savedPath
+                isGeneratingPixelArt = false
+            }
+        }
+    }
+
     private func saveItem() {
         if let item = item {
             // Edit existing item
@@ -627,5 +769,61 @@ struct AddEditItemView: View {
         }
 
         dismiss()
+    }
+}
+
+// MARK: - Camera Picker
+struct CameraPicker: UIViewControllerRepresentable {
+    @Environment(\.dismiss) private var dismiss
+    let onImageCaptured: (UIImage) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+
+        init(_ parent: CameraPicker) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.onImageCaptured(image)
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+}
+
+// MARK: - UIImage Extension
+extension UIImage {
+    func fixedOrientation() -> UIImage {
+        // If image is already in correct orientation, return it
+        if imageOrientation == .up {
+            return self
+        }
+
+        // Redraw the image with correct orientation
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        draw(in: CGRect(origin: .zero, size: size))
+        let normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        return normalizedImage ?? self
     }
 }
