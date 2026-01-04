@@ -6,7 +6,7 @@ class GeminiService {
     static let shared = GeminiService()
     private init() {}
 
-    private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    private let baseURL = Constants.API.geminiBaseURL
 
     // MARK: - Generate Response
 
@@ -107,17 +107,17 @@ enum GeminiError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noAPIKey:
-            return "No API key found. Please add your Gemini API key in Settings."
+            return "No API key found. Please add your Gemini API key in Settings (tap the gear icon)."
         case .invalidURL:
             return "Invalid API URL"
         case .invalidResponse:
             return "Invalid response from server"
         case .apiError(let code):
-            return "API error (status code: \(code)). Please check your API key."
+            return "API request failed (status \(code)). This usually means your API key is invalid or has expired. Please check Settings."
         case .apiErrorWithMessage(let code, let message):
-            return "API error (\(code)): \(message)"
+            return "API error (\(code)): \(message). Please check your API key in Settings."
         case .parseError:
-            return "Failed to parse response"
+            return "Failed to parse response from server"
         }
     }
 }

@@ -7,13 +7,15 @@ class KeychainHelper {
     static let shared = KeychainHelper()
     private init() {}
 
-    private let service = "com.allourthings.apikeys"
-    private let geminiKeyAccount = "gemini-api-key"
+    private let service = Constants.Keychain.service
+    private let geminiKeyAccount = Constants.Keychain.geminiKeyAccount
 
     // MARK: - Save API Key
 
     func saveGeminiKey(_ key: String) -> Bool {
-        let data = key.data(using: .utf8)!
+        guard let data = key.data(using: .utf8) else {
+            return false
+        }
 
         // Delete any existing key first
         deleteGeminiKey()

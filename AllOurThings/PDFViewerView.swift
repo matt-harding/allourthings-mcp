@@ -70,7 +70,7 @@ struct PDFKitView: UIViewRepresentable {
                 if let pageNum = pageNumber, pageNum > 0 {
                     let pageIndex = pageNum - 1 // Convert to 0-based index
 
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Constants.Timing.pdfPageNavigationDelay) {
                         if pageIndex < document.pageCount,
                            let page = document.page(at: pageIndex) {
                             pdfView.go(to: page)

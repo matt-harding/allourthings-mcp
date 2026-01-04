@@ -11,7 +11,7 @@ class PixelArtProcessor {
 
     // MARK: - Convert Image to Pixel Art
 
-    func convertToPixelArt(imageData: Data, pixelScale: CGFloat = 8.0) -> Data? {
+    func convertToPixelArt(imageData: Data, pixelScale: CGFloat = Constants.PixelArt.defaultPixelScale) -> Data? {
         guard let inputImage = UIImage(data: imageData),
               let ciImage = CIImage(image: inputImage) else {
             return nil
@@ -34,8 +34,8 @@ class PixelArtProcessor {
 
         let resultImage = UIImage(cgImage: cgImage)
 
-        // Resize to reasonable size (max 1024x1024 to keep file size down)
-        let resizedImage = resizeImage(resultImage, maxDimension: 1024)
+        // Resize to reasonable size (max dimension to keep file size down)
+        let resizedImage = resizeImage(resultImage, maxDimension: Constants.PixelArt.maxImageDimension)
 
         // Convert to PNG data
         return resizedImage.pngData()
@@ -64,7 +64,7 @@ class PixelArtProcessor {
         }
 
         posterizeFilter.setValue(image, forKey: kCIInputImageKey)
-        posterizeFilter.setValue(6.0, forKey: "inputLevels") // 6 levels per channel gives retro look
+        posterizeFilter.setValue(Constants.PixelArt.colorPosterizeLevels, forKey: "inputLevels") // Color levels per channel for retro look
 
         return posterizeFilter.outputImage
     }
@@ -78,7 +78,7 @@ class PixelArtProcessor {
         }
 
         sharpenFilter.setValue(image, forKey: kCIInputImageKey)
-        sharpenFilter.setValue(0.8, forKey: kCIInputSharpnessKey)
+        sharpenFilter.setValue(Constants.PixelArt.sharpenIntensity, forKey: kCIInputSharpnessKey)
 
         return sharpenFilter.outputImage
     }

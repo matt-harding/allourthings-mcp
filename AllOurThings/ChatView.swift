@@ -199,7 +199,7 @@ struct ChatView: View {
                                         .foregroundColor(.white)
                                 }
                             }
-                            .frame(width: 44, height: 44)
+                            .frame(width: Constants.Dimensions.circularButtonSize, height: Constants.Dimensions.circularButtonSize)
                             .background(questionText.isEmpty || isLoading ? Theme.Colors.softGray : Theme.Colors.blushPink)
                             .cornerRadius(22)
                             .disabled(questionText.isEmpty || isLoading)
@@ -360,32 +360,11 @@ struct ChatView: View {
     }
 
     private func buildItemsContext() -> String {
-        if items.isEmpty {
+        guard !items.isEmpty else {
             return "The user has no items in their collection yet."
         }
 
-        return items.map { item in
-            var itemInfo = "- \(item.name)"
-            if !item.category.isEmpty {
-                itemInfo += " (Category: \(item.category))"
-            }
-            if !item.manufacturer.isEmpty {
-                itemInfo += " by \(item.manufacturer)"
-            }
-            if !item.location.isEmpty {
-                itemInfo += " located in \(item.location)"
-            }
-            if let warrantyDate = item.warrantyExpirationDate {
-                itemInfo += " (Warranty expires: \(warrantyDate.formatted(date: .abbreviated, time: .omitted)))"
-            }
-            if !item.notes.isEmpty {
-                itemInfo += " (Notes: \(item.notes))"
-            }
-            if let manualText = item.manualText, !manualText.isEmpty {
-                itemInfo += "\n  Manual documentation:\n\(manualText)"
-            }
-            return itemInfo
-        }.joined(separator: "\n")
+        return items.map { $0.contextDescription }.joined(separator: "\n")
     }
 }
 

@@ -47,4 +47,31 @@ final class Item {
         self.pixelArtFilePath = pixelArtFilePath
         self.timestamp = Date()
     }
+
+    // MARK: - Computed Properties
+
+    var contextDescription: String {
+        var itemInfo = "- \(name)"
+
+        if !category.isEmpty {
+            itemInfo += " (Category: \(category))"
+        }
+        if !manufacturer.isEmpty {
+            itemInfo += " by \(manufacturer)"
+        }
+        if !location.isEmpty {
+            itemInfo += " located in \(location)"
+        }
+        if let warrantyDate = warrantyExpirationDate {
+            itemInfo += " (Warranty expires: \(warrantyDate.formatted(date: .abbreviated, time: .omitted)))"
+        }
+        if !notes.isEmpty {
+            itemInfo += " (Notes: \(notes))"
+        }
+        if let manualText = manualText, !manualText.isEmpty {
+            itemInfo += "\n  Manual documentation:\n\(manualText)"
+        }
+
+        return itemInfo
+    }
 }

@@ -25,6 +25,7 @@ struct AddEditItemView: View {
     @State private var showingDocumentPicker = false
     @State private var isProcessingPDF = false
     @State private var pdfStats: ExtractionStats?
+    @State private var pdfError: String?
 
     // Pixel Art Image fields
     @State private var pixelArtImageData: Data?
@@ -79,30 +80,10 @@ struct AddEditItemView: View {
 
                         VStack(spacing: Theme.Spacing.small) {
                             // Name field (required)
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                HStack {
-                                    Text("Name")
-                                        .font(Theme.Fonts.cosySubheadline())
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                    Text("*")
-                                        .font(Theme.Fonts.cosySubheadline())
-                                        .foregroundColor(Theme.Colors.peach)
-                                }
-                                CozyTextField(placeholder: "Enter item name", text: $name)
-                            }
+                            RequiredFieldView(label: "Name", placeholder: "Enter item name", text: $name)
 
                             // Manufacturer field (required)
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                HStack {
-                                    Text("Manufacturer")
-                                        .font(Theme.Fonts.cosySubheadline())
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                    Text("*")
-                                        .font(Theme.Fonts.cosySubheadline())
-                                        .foregroundColor(Theme.Colors.peach)
-                                }
-                                CozyTextField(placeholder: "Enter manufacturer name", text: $manufacturer)
-                            }
+                            RequiredFieldView(label: "Manufacturer", placeholder: "Enter manufacturer name", text: $manufacturer)
 
                             // Serial Number field (optional)
                             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
@@ -128,14 +109,7 @@ struct AddEditItemView: View {
                                 CozyTextField(placeholder: "Where is this item stored?", text: $location)
                             }
                         }
-                        .padding(Theme.Spacing.medium)
-                        .background(Theme.Colors.cloudWhite)
-                        .cornerRadius(Theme.CornerRadius.large)
-                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
-                        )
+                        .cosyCard(padding: Theme.Spacing.medium)
                     }
 
                     // Dates Section
@@ -198,14 +172,7 @@ struct AddEditItemView: View {
                                 showingWarrantyDatePicker = true
                             }
                         }
-                        .padding(Theme.Spacing.medium)
-                        .background(Theme.Colors.cloudWhite)
-                        .cornerRadius(Theme.CornerRadius.large)
-                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
-                        )
+                        .cosyCard(padding: Theme.Spacing.medium)
                     }
 
                     // Notes Section
@@ -272,6 +239,20 @@ struct AddEditItemView: View {
                                 }
                             }
 
+                            // Show error if PDF processing failed
+                            if let error = pdfError {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(Theme.Colors.peach)
+                                    Text(error)
+                                        .font(Theme.Fonts.cosyCaption())
+                                        .foregroundColor(Theme.Colors.peach)
+                                }
+                                .padding(Theme.Spacing.small)
+                                .background(Theme.Colors.peach.opacity(0.1))
+                                .cornerRadius(Theme.CornerRadius.medium)
+                            }
+
                             // Upload button
                             Button(action: { showingDocumentPicker = true }) {
                                 HStack {
@@ -297,14 +278,7 @@ struct AddEditItemView: View {
                             }
                             .disabled(isProcessingPDF)
                         }
-                        .padding(Theme.Spacing.medium)
-                        .background(Theme.Colors.cloudWhite)
-                        .cornerRadius(Theme.CornerRadius.large)
-                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
-                        )
+                        .cosyCard(padding: Theme.Spacing.medium)
                     }
 
                     // Photo Section
@@ -424,14 +398,7 @@ struct AddEditItemView: View {
                                 }
                             }
                         }
-                        .padding(Theme.Spacing.medium)
-                        .background(Theme.Colors.cloudWhite)
-                        .cornerRadius(Theme.CornerRadius.large)
-                        .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
-                        )
+                        .cosyCard(padding: Theme.Spacing.medium)
                     }
                 }
                 .padding(Theme.Spacing.medium)
@@ -463,72 +430,10 @@ struct AddEditItemView: View {
                 }
             }
             .sheet(isPresented: $showingPurchaseDatePicker) {
-                NavigationView {
-                    VStack {
-                        DatePicker("Purchase Date", selection: Binding(
-                            get: { purchaseDate ?? Date() },
-                            set: { purchaseDate = $0 }
-                        ), displayedComponents: .date)
-                        .datePickerStyle(.wheel)
-                        .labelsHidden()
-                        .tint(Theme.Colors.blushPink)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Theme.Colors.warmCream)
-                    .navigationTitle("Purchase Date")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Clear") {
-                                purchaseDate = nil
-                                showingPurchaseDatePicker = false
-                            }
-                            .foregroundColor(Theme.Colors.mutedPlum)
-                            .font(Theme.Fonts.cosyBody())
-                        }
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingPurchaseDatePicker = false
-                            }
-                            .foregroundColor(Theme.Colors.blushPink)
-                            .font(Theme.Fonts.cosyButton())
-                        }
-                    }
-                }
+                DatePickerSheet(title: "Purchase Date", date: $purchaseDate, isPresented: $showingPurchaseDatePicker)
             }
             .sheet(isPresented: $showingWarrantyDatePicker) {
-                NavigationView {
-                    VStack {
-                        DatePicker("Warranty Expiration", selection: Binding(
-                            get: { warrantyExpirationDate ?? Date() },
-                            set: { warrantyExpirationDate = $0 }
-                        ), displayedComponents: .date)
-                        .datePickerStyle(.wheel)
-                        .labelsHidden()
-                        .tint(Theme.Colors.blushPink)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Theme.Colors.warmCream)
-                    .navigationTitle("Warranty Expiration")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Clear") {
-                                warrantyExpirationDate = nil
-                                showingWarrantyDatePicker = false
-                            }
-                            .foregroundColor(Theme.Colors.mutedPlum)
-                            .font(Theme.Fonts.cosyBody())
-                        }
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingWarrantyDatePicker = false
-                            }
-                            .foregroundColor(Theme.Colors.blushPink)
-                            .font(Theme.Fonts.cosyButton())
-                        }
-                    }
-                }
+                DatePickerSheet(title: "Warranty Expiration", date: $warrantyExpirationDate, isPresented: $showingWarrantyDatePicker)
             }
             .sheet(isPresented: $showingDocumentPicker) {
                 DocumentPicker(onDocumentPicked: handleDocumentPicked)
@@ -541,13 +446,14 @@ struct AddEditItemView: View {
 
     private func handleDocumentPicked(_ url: URL) {
         isProcessingPDF = true
+        pdfError = nil
 
         Task {
             // First, save the PDF file
             guard let savedPath = PDFStorageHelper.shared.savePDF(from: url) else {
                 await MainActor.run {
                     isProcessingPDF = false
-                    // Could show error alert here
+                    pdfError = "Failed to save PDF file. Please try again."
                 }
                 return
             }
@@ -557,7 +463,7 @@ struct AddEditItemView: View {
                   let result = PDFTextExtractor.shared.extractEnglishText(from: savedURL) else {
                 await MainActor.run {
                     isProcessingPDF = false
-                    // Could show error alert here
+                    pdfError = "Failed to extract text from PDF. The file may be corrupted or password-protected."
                 }
                 return
             }
@@ -572,6 +478,7 @@ struct AddEditItemView: View {
                 manualFileName = PDFTextExtractor.shared.getFileName(from: url)
                 manualFilePath = savedPath
                 pdfStats = result.stats
+                pdfError = nil
                 isProcessingPDF = false
             }
         }
@@ -587,17 +494,55 @@ struct AddEditItemView: View {
         manualFileName = nil
         manualFilePath = nil
         pdfStats = nil
+        pdfError = nil
     }
 
     // MARK: - Photo Handling
 
-    private func handlePhotoSelection(_ photoItem: PhotosPickerItem?) async {
-        guard let photoItem = photoItem else { return }
-
+    private func processImageData(_ imageData: Data, fileName: String) async {
         await MainActor.run {
             isGeneratingPixelArt = true
             pixelArtError = nil
         }
+
+        // Convert to pixel art using local processor
+        let pixelArtData = await Task.detached {
+            PixelArtProcessor.shared.convertToPixelArt(imageData: imageData)
+        }.value
+
+        guard let pixelArtData = pixelArtData else {
+            await MainActor.run {
+                pixelArtError = "Failed to convert to pixel art"
+                isGeneratingPixelArt = false
+            }
+            return
+        }
+
+        // Save to disk
+        guard let savedPath = ImageStorageHelper.shared.saveImage(pixelArtData, originalFileName: fileName) else {
+            await MainActor.run {
+                pixelArtError = "Failed to save pixel art"
+                isGeneratingPixelArt = false
+            }
+            return
+        }
+
+        await MainActor.run {
+            // Delete old image if replacing
+            if let oldPath = pixelArtFilePath {
+                ImageStorageHelper.shared.deleteImage(at: oldPath)
+            }
+
+            // Update state
+            pixelArtImageData = pixelArtData
+            pixelArtFileName = fileName
+            pixelArtFilePath = savedPath
+            isGeneratingPixelArt = false
+        }
+    }
+
+    private func handlePhotoSelection(_ photoItem: PhotosPickerItem?) async {
+        guard let photoItem = photoItem else { return }
 
         do {
             // Load image data from PhotosPickerItem
@@ -609,40 +554,9 @@ struct AddEditItemView: View {
                 return
             }
 
-            // Convert to pixel art using local processor (runs on background thread)
-            let pixelArtData = await Task.detached {
-                PixelArtProcessor.shared.convertToPixelArt(imageData: imageData)
-            }.value
-
-            guard let pixelArtData = pixelArtData else {
-                await MainActor.run {
-                    pixelArtError = "Failed to convert to pixel art"
-                    isGeneratingPixelArt = false
-                }
-                return
-            }
-
-            // Save to disk
-            let originalFileName = "photo_\(Date().timeIntervalSince1970).png"
-            guard let savedPath = ImageStorageHelper.shared.saveImage(pixelArtData, originalFileName: originalFileName) else {
-                await MainActor.run {
-                    pixelArtError = "Failed to save pixel art"
-                    isGeneratingPixelArt = false
-                }
-                return
-            }
+            await processImageData(imageData, fileName: Constants.FileNames.photoFileName())
 
             await MainActor.run {
-                // Delete old image if replacing
-                if let oldPath = pixelArtFilePath {
-                    ImageStorageHelper.shared.deleteImage(at: oldPath)
-                }
-
-                // Update state
-                pixelArtImageData = pixelArtData
-                pixelArtFileName = originalFileName
-                pixelArtFilePath = savedPath
-                isGeneratingPixelArt = false
                 selectedPhotoItem = nil
             }
 
@@ -669,16 +583,11 @@ struct AddEditItemView: View {
 
     private func handleCameraCapture(_ image: UIImage) {
         Task {
-            await MainActor.run {
-                isGeneratingPixelArt = true
-                pixelArtError = nil
-            }
-
             // Fix image orientation before converting to data
             let orientationFixedImage = image.fixedOrientation()
 
             // Convert UIImage to Data
-            guard let imageData = orientationFixedImage.jpegData(compressionQuality: 0.8) else {
+            guard let imageData = orientationFixedImage.jpegData(compressionQuality: Constants.PixelArt.jpegCompressionQuality) else {
                 await MainActor.run {
                     pixelArtError = "Failed to process camera image"
                     isGeneratingPixelArt = false
@@ -686,41 +595,7 @@ struct AddEditItemView: View {
                 return
             }
 
-            // Convert to pixel art using local processor
-            let pixelArtData = await Task.detached {
-                PixelArtProcessor.shared.convertToPixelArt(imageData: imageData)
-            }.value
-
-            guard let pixelArtData = pixelArtData else {
-                await MainActor.run {
-                    pixelArtError = "Failed to convert to pixel art"
-                    isGeneratingPixelArt = false
-                }
-                return
-            }
-
-            // Save to disk
-            let originalFileName = "camera_\(Date().timeIntervalSince1970).png"
-            guard let savedPath = ImageStorageHelper.shared.saveImage(pixelArtData, originalFileName: originalFileName) else {
-                await MainActor.run {
-                    pixelArtError = "Failed to save pixel art"
-                    isGeneratingPixelArt = false
-                }
-                return
-            }
-
-            await MainActor.run {
-                // Delete old image if replacing
-                if let oldPath = pixelArtFilePath {
-                    ImageStorageHelper.shared.deleteImage(at: oldPath)
-                }
-
-                // Update state
-                pixelArtImageData = pixelArtData
-                pixelArtFileName = originalFileName
-                pixelArtFilePath = savedPath
-                isGeneratingPixelArt = false
-            }
+            await processImageData(imageData, fileName: Constants.FileNames.cameraFileName())
         }
     }
 
@@ -772,6 +647,48 @@ struct AddEditItemView: View {
     }
 }
 
+// MARK: - Date Picker Sheet
+struct DatePickerSheet: View {
+    let title: String
+    @Binding var date: Date?
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        NavigationView {
+            VStack {
+                DatePicker(title, selection: Binding(
+                    get: { date ?? Date() },
+                    set: { date = $0 }
+                ), displayedComponents: .date)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .tint(Theme.Colors.blushPink)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.Colors.warmCream)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Clear") {
+                        date = nil
+                        isPresented = false
+                    }
+                    .foregroundColor(Theme.Colors.mutedPlum)
+                    .font(Theme.Fonts.cosyBody())
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        isPresented = false
+                    }
+                    .foregroundColor(Theme.Colors.blushPink)
+                    .font(Theme.Fonts.cosyButton())
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Camera Picker
 struct CameraPicker: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
@@ -806,6 +723,27 @@ struct CameraPicker: UIViewControllerRepresentable {
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.dismiss()
+        }
+    }
+}
+
+// MARK: - Required Field View
+struct RequiredFieldView: View {
+    let label: String
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+            HStack {
+                Text(label)
+                    .font(Theme.Fonts.cosySubheadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+                Text("*")
+                    .font(Theme.Fonts.cosySubheadline())
+                    .foregroundColor(Theme.Colors.peach)
+            }
+            CozyTextField(placeholder: placeholder, text: $text)
         }
     }
 }

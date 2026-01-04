@@ -100,15 +100,7 @@ enum Theme {
     }
 
     // MARK: - Shadows (Pixel Art / Arcade Style - More Defined)
-
-    // Pixel art style uses sharper, more defined shadows
-    static func standardShadow() -> some View {
-        EmptyView().shadow(color: Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
-    }
-
-    static func softShadow() -> some View {
-        EmptyView().shadow(color: Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-    }
+    // Note: Shadow view modifiers are defined in the View extension below
 
     // MARK: - Border Widths (Pixel Art / Arcade Style - Thicker & Crisper)
 
@@ -182,6 +174,15 @@ extension View {
             )
             .ignoresSafeArea()
         )
+    }
+
+    // Shadow Modifiers (Pixel Art Style)
+    func standardShadow() -> some View {
+        self.shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
+    }
+
+    func softShadow() -> some View {
+        self.shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
     }
 }
 

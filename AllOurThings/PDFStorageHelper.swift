@@ -16,7 +16,7 @@ class PDFStorageHelper {
             return nil
         }
 
-        let manualsDirectory = documentsDirectory.appendingPathComponent("Manuals", isDirectory: true)
+        let manualsDirectory = documentsDirectory.appendingPathComponent(Constants.Storage.manualsDirectory, isDirectory: true)
 
         // Create directory if it doesn't exist
         if !fileManager.fileExists(atPath: manualsDirectory.path) {
