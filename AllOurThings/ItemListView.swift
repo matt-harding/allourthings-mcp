@@ -1,42 +1,94 @@
 import SwiftUI
 import SwiftData
 
+enum GroupingMode: String, CaseIterable {
+    case category = "Category"
+    case location = "Location"
+}
+
 struct ItemListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
     @State private var showingAddSheet = false
+    @State private var groupingMode: GroupingMode = .category
 
     let columns = [
         GridItem(.flexible(), spacing: Theme.Spacing.xs),
         GridItem(.flexible(), spacing: Theme.Spacing.xs)
     ]
 
+    private var groupedItems: [(name: String, items: [Item])] {
+        let grouped = Dictionary(grouping: items) { item in
+            switch groupingMode {
+            case .category:
+                return item.category.isEmpty ? "Uncategorized" : item.category
+            case .location:
+                return item.location.isEmpty ? "No Location" : item.location
+            }
+        }
+
+        return grouped.map { (name: $0.key, items: $0.value) }
+            .sorted { tuple1, tuple2 in
+                // Sort alphabetically
+                return tuple1.name < tuple2.name
+            }
+    }
+
     var body: some View {
         NavigationSplitView {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
-                    ForEach(items) { item in
-                        NavigationLink {
-                            ItemDetailView(item: item)
-                        } label: {
-                            ItemRowView(item: item)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .contextMenu {
-                            Button(role: .destructive, action: {
-                                deleteItem(item)
-                            }) {
-                                Label("Delete", systemImage: "trash")
+            VStack(spacing: 0) {
+                // Segmented control bar
+                Picker("Group by", selection: $groupingMode) {
+                    ForEach(GroupingMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, Theme.Spacing.small)
+                .padding(.vertical, Theme.Spacing.xs)
+                .background(Theme.Colors.cloudWhite)
+
+                ScrollView {
+                    LazyVStack(spacing: Theme.Spacing.medium, pinnedViews: []) {
+                        ForEach(groupedItems, id: \.name) { group in
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                // Simple Section Header
+                                Text(group.name)
+                                    .font(Theme.Fonts.cosyHeadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                    .padding(.horizontal, Theme.Spacing.small)
+                                    .padding(.vertical, Theme.Spacing.xs)
+
+                                // Grid for this group's items
+                                LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
+                                    ForEach(group.items) { item in
+                                        NavigationLink {
+                                            ItemDetailView(item: item)
+                                        } label: {
+                                            ItemRowView(item: item, groupingMode: groupingMode)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        .contextMenu {
+                                            Button(role: .destructive, action: {
+                                                deleteItem(item)
+                                            }) {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, Theme.Spacing.xs)
                             }
                         }
                     }
+                    .padding(.vertical, Theme.Spacing.xs)
                 }
-                .padding(Theme.Spacing.xs)
             }
             .background(Theme.Colors.skyBlue)
-            .navigationTitle("Items")
+            .navigationTitle("AllOurThings")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddSheet = true }) {
                         Label("Add Item", systemImage: "plus.circle.fill")
                     }
@@ -89,6 +141,7 @@ struct ItemListView: View {
 
 struct ItemRowView: View {
     let item: Item
+    let groupingMode: GroupingMode
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,22 +167,37 @@ struct ItemRowView: View {
                         .foregroundColor(Theme.Colors.categoryColor(for: item.category).opacity(0.4))
                 }
 
-                // Category badge in corner
-                if !item.category.isEmpty {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Text(item.category)
-                                .font(Theme.Fonts.cosyCaption())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Theme.Colors.categoryColor(for: item.category).opacity(0.9))
-                                .cornerRadius(Theme.CornerRadius.small)
-                                .padding(Theme.Spacing.xxs)
-                        }
+                // Badge in corner (shows the field NOT being used for grouping)
+                VStack {
+                    HStack {
                         Spacer()
+                        if groupingMode == .category {
+                            // Grouping by category, so show location
+                            if !item.location.isEmpty {
+                                Text(item.location)
+                                    .font(Theme.Fonts.cosyCaption())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Theme.Colors.softLavender.opacity(0.9))
+                                    .cornerRadius(Theme.CornerRadius.small)
+                                    .padding(Theme.Spacing.xxs)
+                            }
+                        } else {
+                            // Grouping by location, so show category
+                            if !item.category.isEmpty {
+                                Text(item.category)
+                                    .font(Theme.Fonts.cosyCaption())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Theme.Colors.categoryColor(for: item.category).opacity(0.9))
+                                    .cornerRadius(Theme.CornerRadius.small)
+                                    .padding(Theme.Spacing.xxs)
+                            }
+                        }
                     }
+                    Spacer()
                 }
             }
             .frame(height: 120)
