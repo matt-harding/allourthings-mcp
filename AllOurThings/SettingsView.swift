@@ -98,7 +98,7 @@ struct SettingsView: View {
                                 Text("1.")
                                     .font(Theme.Fonts.cosyBody())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
-                                Text("Visit ai.google.dev")
+                                Text("Visit aistudio.google.com")
                                     .font(Theme.Fonts.cosyBody())
                                     .foregroundColor(Theme.Colors.softGray)
                             }
@@ -107,22 +107,14 @@ struct SettingsView: View {
                                 Text("2.")
                                     .font(Theme.Fonts.cosyBody())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
-                                Text("Click 'Get API Key'")
+                                Text("Click 'Generate a free API key'")
                                     .font(Theme.Fonts.cosyBody())
                                     .foregroundColor(Theme.Colors.softGray)
                             }
+
 
                             HStack(alignment: .top, spacing: Theme.Spacing.xs) {
                                 Text("3.")
-                                    .font(Theme.Fonts.cosyBody())
-                                    .foregroundColor(Theme.Colors.cocoaBrown)
-                                Text("Create or select a project")
-                                    .font(Theme.Fonts.cosyBody())
-                                    .foregroundColor(Theme.Colors.softGray)
-                            }
-
-                            HStack(alignment: .top, spacing: Theme.Spacing.xs) {
-                                Text("4.")
                                     .font(Theme.Fonts.cosyBody())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
                                 Text("Copy your API key here")
