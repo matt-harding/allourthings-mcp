@@ -9,11 +9,6 @@ enum Constants {
 
     enum Keychain {
         static let service = "com.allourthings.apikeys"
-        static let geminiKeyAccount = "gemini-api-key"
-    }
-
-    enum API {
-        static let geminiBaseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
     }
 
     enum FileNames {

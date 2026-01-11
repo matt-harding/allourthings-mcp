@@ -29,19 +29,11 @@ struct ContentView: View {
                     Text("Items")
                 }
 
-            ChatView()
+            AppleIntelligenceChatView()
                 .tabItem {
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                     Text("Chat")
                 }
-
-            if #available(iOS 26.0, *) {
-                AppleIntelligenceChatView()
-                    .tabItem {
-                        Image(systemName: "sparkles")
-                        Text("Apple AI")
-                    }
-            }
         }
         .tint(Theme.Colors.blushPink)
     }
