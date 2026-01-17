@@ -259,32 +259,59 @@ struct AppleIntelligenceChatView: View {
     // MARK: - Functions
 
     private func setupSession() {
-        guard case .available = model.availability else { return }
+        print("🤖 [AppleIntelligenceChatView] Setting up session...")
+        guard case .available = model.availability else {
+            print("⚠️ [AppleIntelligenceChatView] Model not available, skipping session setup")
+            return
+        }
 
         let instructions = """
         You are a helpful assistant for a household item management app.
 
-        When answering questions using information from manual documentation:
-        - Cite page numbers using format: (page X) or (pages X-Y)
-        - Place citations immediately after relevant information
-        - Example: "Set temperature to 60°C (page 12)"
-        - Always cite specific page numbers when available in the manual text
+        You have access to tools to search and retrieve information about the user's items and their manuals.
 
-        Be concise, helpful, and prioritize information from manual documentation when available.
+        When the user asks a question:
+        1. Use search_items to find relevant items based on the query
+        2. Use list_manual_sections to see what documentation sections are available
+        3. Use get_manual_section to retrieve specific section content
+        4. Alternatively, use search_manual_sections to find relevant information across all manuals
+
+        When answering questions using information from manuals:
+        - Always cite page numbers using format: (page X) or (pages X-Y)
+        - Place citations immediately after relevant information
+        - Example: "Clean with soft cloth (page 12)"
+
+        Be concise and helpful. Use the tools systematically to find accurate information.
         """
 
-        session = LanguageModelSession(instructions: instructions)
+        // Create tools
+        let tools: [any Tool] = [
+            SearchItemsTool(items: items),
+            ListManualSectionsTool(modelContext: modelContext),
+            GetManualSectionTool(modelContext: modelContext),
+            SearchManualSectionsTool(modelContext: modelContext)
+        ]
+
+        print("🤖 [AppleIntelligenceChatView] Created \(tools.count) tools for session")
+        print("🤖 [AppleIntelligenceChatView] Current items count: \(items.count)")
+
+        session = LanguageModelSession(tools: tools, instructions: instructions)
+        print("✅ [AppleIntelligenceChatView] Session setup complete")
     }
 
     private func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isProcessing else { return }
 
-        // Collect items with manuals
+        print("💬 [AppleIntelligenceChatView] Sending message: '\(text)'")
+
+        // Collect items with manuals (for citation linking)
         let manualsRefs = items.compactMap { item -> ItemManualReference? in
             guard let filePath = item.manualFilePath else { return nil }
             return ItemManualReference(itemName: item.name, manualFilePath: filePath)
         }
+
+        print("💬 [AppleIntelligenceChatView] Found \(manualsRefs.count) items with manual references")
 
         // Add user message
         let userMessage = ChatMessage(text: text, isUser: true, itemsWithManuals: manualsRefs)
@@ -295,37 +322,37 @@ struct AppleIntelligenceChatView: View {
         isProcessing = true
         errorMessage = nil
 
-        // Get response from model
+        // Get response from model with tools
         Task {
             do {
                 guard let session = session else {
+                    print("❌ [AppleIntelligenceChatView] Session not initialized")
                     throw NSError(domain: "AppleIntelligenceChat", code: 1, userInfo: [NSLocalizedDescriptionKey: "Session not initialized"])
                 }
 
                 // Check if session is already responding
                 if session.isResponding {
+                    print("⚠️ [AppleIntelligenceChatView] Session already responding")
                     throw NSError(domain: "AppleIntelligenceChat", code: 2, userInfo: [NSLocalizedDescriptionKey: "Session is already processing a request"])
                 }
 
-                // Build context for this specific message
-                let itemsContext = buildItemsContext(maxManualLength: 2000)
-                let contextualPrompt = """
-                Context: The user has \(items.count) items in their collection.
+                print("🤖 [AppleIntelligenceChatView] Waiting for response from model...")
 
-                \(itemsContext)
+                // Send message - session will automatically use tools as needed
+                let response = try await session.respond(to: text)
 
-                User question: \(text)
-                """
-
-                let response = try await session.respond(to: contextualPrompt)
+                print("✅ [AppleIntelligenceChatView] Received response (length: \(response.content.count))")
+                print("📝 [AppleIntelligenceChatView] Response: \(response.content)")
 
                 // Add AI response
                 await MainActor.run {
                     let aiMessage = ChatMessage(text: response.content, isUser: false, itemsWithManuals: manualsRefs)
                     messages.append(aiMessage)
                     isProcessing = false
+                    print("✅ [AppleIntelligenceChatView] Message processing complete")
                 }
             } catch {
+                print("❌ [AppleIntelligenceChatView] Error: \(error.localizedDescription)")
                 await MainActor.run {
                     let errorMsg = ChatMessage(
                         text: "Sorry, I encountered an error: \(error.localizedDescription)",
@@ -346,92 +373,27 @@ struct AppleIntelligenceChatView: View {
         }
     }
 
-    private func buildItemsContext(maxManualLength: Int = 2000) -> String {
-        guard !items.isEmpty else {
-            return "The user has no items in their collection yet."
-        }
-
-        return items.map { item in
-            buildItemContext(for: item, maxManualLength: maxManualLength)
-        }.joined(separator: "\n")
-    }
-
-    private func buildItemContext(for item: Item, maxManualLength: Int) -> String {
-        var itemInfo = "- \(item.name)"
-
-        if !item.category.isEmpty {
-            itemInfo += " (Category: \(item.category))"
-        }
-        if !item.manufacturer.isEmpty {
-            itemInfo += " by \(item.manufacturer)"
-        }
-        if !item.location.isEmpty {
-            itemInfo += " located in \(item.location)"
-        }
-        if let warrantyDate = item.warrantyExpirationDate {
-            itemInfo += " (Warranty expires: \(warrantyDate.formatted(date: .abbreviated, time: .omitted)))"
-        }
-        if !item.notes.isEmpty {
-            itemInfo += " (Notes: \(item.notes))"
-        }
-
-        // Include manual text but limit its length
-        if let manualText = item.manualText, !manualText.isEmpty {
-            let truncatedManual = String(manualText.prefix(maxManualLength))
-            let wasTruncated = manualText.count > maxManualLength
-            itemInfo += "\n  Manual documentation:\n\(truncatedManual)"
-            if wasTruncated {
-                itemInfo += "\n  [Manual truncated for length...]"
-            }
-        }
-
-        return itemInfo
-    }
-
-    private func parseCitations(_ text: String, itemsWithManuals: [ItemManualReference]) -> AttributedString {
-        var attributedString = AttributedString(text)
-
-        // Pattern to match (page X) or (pages X-Y) or (page X-Y)
-        let pattern = "\\(pages? (\\d+)(?:-(\\d+))?\\)"
-
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
-            return attributedString
-        }
-
-        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
-
-        // Process matches in reverse to maintain correct indices
-        for match in matches.reversed() {
-            guard let range = Range(match.range, in: text) else { continue }
-
-            // Extract page number
-            let pageNumberRange = match.range(at: 1)
-            guard let pageRange = Range(pageNumberRange, in: text) else { continue }
-            let pageNumber = String(text[pageRange])
-
-            // Create link URL with custom scheme
-            if let attrRange = Range(range, in: attributedString) {
-                attributedString[attrRange].foregroundColor = Theme.Colors.blushPink
-                attributedString[attrRange].underlineStyle = .single
-                attributedString[attrRange].link = URL(string: "manual://page/\(pageNumber)")
-            }
-        }
-
-        return attributedString
-    }
-
     private func handleCitationTap(url: URL, itemsWithManuals: [ItemManualReference]) {
+        print("🔗 [AppleIntelligenceChatView] Citation tapped: \(url)")
+
         guard url.scheme == "manual",
               url.host == "page",
               let pageString = url.pathComponents.last,
               let pageNumber = Int(pageString) else {
+            print("⚠️ [AppleIntelligenceChatView] Invalid citation URL format")
             return
         }
 
+        print("🔗 [AppleIntelligenceChatView] Parsed page number: \(pageNumber)")
+        print("🔗 [AppleIntelligenceChatView] Available manuals: \(itemsWithManuals.count)")
+
         // If only one manual, open it directly
         guard let firstManual = itemsWithManuals.first else {
+            print("⚠️ [AppleIntelligenceChatView] No manuals available to open")
             return
         }
+
+        print("📱 [AppleIntelligenceChatView] Opening PDF: \(firstManual.itemName) at page \(pageNumber)")
 
         // Create PDF viewer data and present
         pdfToShow = PDFViewerData(
@@ -522,10 +484,12 @@ struct MessageBubble: View {
         let pattern = "\\(pages? (\\d+)(?:-(\\d+))?\\)"
 
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            print("⚠️ [MessageBubble] Failed to create regex for citation parsing")
             return attributedString
         }
 
         let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        print("📎 [MessageBubble] Found \(matches.count) citation(s) in message")
 
         // Process matches in reverse to maintain correct indices
         for match in matches.reversed() {
@@ -535,6 +499,8 @@ struct MessageBubble: View {
             let pageNumberRange = match.range(at: 1)
             guard let pageRange = Range(pageNumberRange, in: text) else { continue }
             let pageNumber = String(text[pageRange])
+
+            print("  ✓ Creating citation link for page \(pageNumber)")
 
             // Create link URL with custom scheme
             if let attrRange = Range(range, in: attributedString) {

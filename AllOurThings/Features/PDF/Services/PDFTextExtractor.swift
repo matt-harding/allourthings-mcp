@@ -83,6 +83,121 @@ class PDFTextExtractor {
     func getFileName(from url: URL) -> String {
         return url.lastPathComponent
     }
+
+    // MARK: - Extract Sections from English Text
+
+    func extractSections(from text: String) -> [SectionData] {
+        var sections: [SectionData] = []
+        var currentSection: SectionData?
+        var currentPageNumbers: Set<Int> = []
+
+        // Split into lines
+        let lines = text.components(separatedBy: "\n")
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // Check for page markers
+            if let pageNum = extractPageNumber(from: trimmed) {
+                currentPageNumbers.insert(pageNum)
+                continue
+            }
+
+            // Check if line is a heading
+            if isHeading(line: trimmed) {
+                // Save previous section if exists
+                if let section = currentSection {
+                    sections.append(section)
+                }
+
+                // Start new section
+                currentSection = SectionData(
+                    heading: trimmed,
+                    content: "",
+                    pageNumbers: Array(currentPageNumbers)
+                )
+                currentPageNumbers.removeAll()
+            } else if !trimmed.isEmpty {
+                // Add content to current section
+                if currentSection == nil {
+                    // Create default section for content before first heading
+                    currentSection = SectionData(
+                        heading: "Introduction",
+                        content: "",
+                        pageNumbers: Array(currentPageNumbers)
+                    )
+                }
+                currentSection?.content += trimmed + "\n"
+            }
+        }
+
+        // Add final section
+        if let section = currentSection {
+            sections.append(section)
+        }
+
+        // If no sections were found, create one section with all content
+        if sections.isEmpty && !text.isEmpty {
+            sections.append(SectionData(
+                heading: "Manual Content",
+                content: text,
+                pageNumbers: []
+            ))
+        }
+
+        return sections
+    }
+
+    // MARK: - Heading Detection
+
+    private func isHeading(line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+        // Skip very short or very long lines
+        guard trimmed.count >= 3 && trimmed.count <= 100 else { return false }
+
+        // Pattern 1: All caps (e.g., "CLEANING INSTRUCTIONS")
+        let isAllCaps = trimmed == trimmed.uppercased() && trimmed.rangeOfCharacter(from: .letters) != nil
+
+        // Pattern 2: Numbered sections (e.g., "1. Introduction", "1.1 Overview")
+        let numberedPattern = "^\\d+\\.\\d*\\s+[A-Z]"
+        let isNumbered = trimmed.range(of: numberedPattern, options: .regularExpression) != nil
+
+        // Pattern 3: Common heading words
+        let headingKeywords = [
+            "introduction", "overview", "safety", "installation", "operation",
+            "maintenance", "cleaning", "troubleshooting", "specifications",
+            "warranty", "care", "instructions", "setup", "features", "usage",
+            "getting started", "quick start", "important", "caution", "warning"
+        ]
+        let lowercased = trimmed.lowercased()
+        let hasHeadingKeyword = headingKeywords.contains { lowercased.hasPrefix($0) || lowercased.contains($0) }
+
+        // Pattern 4: Title case and relatively short
+        let words = trimmed.components(separatedBy: .whitespaces)
+        let isTitleCase = words.count <= 8 && words.allSatisfy { word in
+            guard let first = word.first else { return false }
+            return first.isUppercase || word.count <= 3  // Allow small words like "the", "and"
+        }
+
+        return isAllCaps || isNumbered || (hasHeadingKeyword && trimmed.count < 60) || isTitleCase
+    }
+
+    // MARK: - Extract Page Number from Line
+
+    private func extractPageNumber(from line: String) -> Int? {
+        // Match "Page X:" pattern
+        let pattern = "^Page (\\d+):$"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+
+        let range = NSRange(line.startIndex..<line.endIndex, in: line)
+        guard let match = regex.firstMatch(in: line, range: range) else { return nil }
+
+        let pageNumberRange = match.range(at: 1)
+        guard let pageRange = Range(pageNumberRange, in: line) else { return nil }
+
+        return Int(String(line[pageRange]))
+    }
 }
 
 // MARK: - Extraction Statistics
@@ -101,4 +216,12 @@ struct ExtractionStats {
         Empty: \(emptyPages) pages
         """
     }
+}
+
+// MARK: - Section Data
+
+struct SectionData {
+    var heading: String
+    var content: String
+    var pageNumbers: [Int]
 }

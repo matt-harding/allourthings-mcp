@@ -26,6 +26,7 @@ struct AddEditItemView: View {
     @State private var isProcessingPDF = false
     @State private var pdfStats: ExtractionStats?
     @State private var pdfError: String?
+    @State private var temporarySections: [SectionData] = []
 
     // Image fields
     @State private var imageData: Data?
@@ -468,10 +469,14 @@ struct AddEditItemView: View {
                 return
             }
 
+            // Extract sections from the text
+            let sections = PDFTextExtractor.shared.extractSections(from: result.text)
+
             await MainActor.run {
-                // Delete old PDF if replacing
+                // Delete old PDF and sections if replacing
                 if let oldPath = manualFilePath {
                     PDFStorageHelper.shared.deletePDF(at: oldPath)
+                    // Note: Section cleanup will happen on save when item.id is available
                 }
 
                 manualText = result.text
@@ -480,6 +485,9 @@ struct AddEditItemView: View {
                 pdfStats = result.stats
                 pdfError = nil
                 isProcessingPDF = false
+
+                // Store sections temporarily (will be saved to database on item save)
+                temporarySections = sections
             }
         }
     }
@@ -587,6 +595,8 @@ struct AddEditItemView: View {
     }
 
     private func saveItem() {
+        let savedItem: Item
+
         if let item = item {
             // Edit existing item
             item.name = name
@@ -603,6 +613,12 @@ struct AddEditItemView: View {
             item.imageData = imageData
             item.imageFileName = imageFileName
             item.imageFilePath = imageFilePath
+            savedItem = item
+
+            // Delete old sections if manual was replaced
+            if !temporarySections.isEmpty {
+                deleteExistingSections(for: item.id)
+            }
         } else {
             // Create new item
             let newItem = Item(
@@ -622,6 +638,22 @@ struct AddEditItemView: View {
                 imageFilePath: imageFilePath
             )
             modelContext.insert(newItem)
+            savedItem = newItem
+        }
+
+        // Save sections to database if any
+        if !temporarySections.isEmpty {
+            for (index, sectionData) in temporarySections.enumerated() {
+                let section = ManualSection(
+                    itemId: savedItem.id,
+                    heading: sectionData.heading,
+                    content: sectionData.content,
+                    pageNumbers: sectionData.pageNumbers,
+                    sectionIndex: index,
+                    fileName: nil
+                )
+                modelContext.insert(section)
+            }
         }
 
         do {
@@ -631,6 +663,20 @@ struct AddEditItemView: View {
         }
 
         dismiss()
+    }
+
+    private func deleteExistingSections(for itemId: UUID) {
+        let descriptor = FetchDescriptor<ManualSection>(
+            predicate: #Predicate<ManualSection> { section in
+                section.itemId == itemId
+            }
+        )
+
+        if let existingSections = try? modelContext.fetch(descriptor) {
+            for section in existingSections {
+                modelContext.delete(section)
+            }
+        }
     }
 }
 

@@ -10,6 +10,7 @@ import SwiftData
 
 @Model
 final class Item {
+    var id: UUID
     var name: String
     var manufacturer: String
     var modelNumber: String
@@ -31,6 +32,7 @@ final class Item {
     var imageFilePath: String?
 
     init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, imageData: Data? = nil, imageFileName: String? = nil, imageFilePath: String? = nil) {
+        self.id = UUID()
         self.name = name
         self.manufacturer = manufacturer
         self.modelNumber = modelNumber
