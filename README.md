@@ -64,6 +64,7 @@ AllOurThings/
 ├── App/
 │   ├── AllOurThingsApp.swift          # App entry point with ModelContainer
 │   ├── ContentView.swift               # Tab navigation (Items, Chat)
+│   ├── WelcomeView.swift               # First-use onboarding wizard
 │   └── Constants.swift                 # Configuration & constants
 ├── Features/
 │   ├── Chat/
@@ -458,6 +459,33 @@ Butter Yellow:#F9E79F  // Highlights
 Gentle Border:#E8D5C4  // Subtle dividers
 Shadow Tint:  #C4A57B  // Depth and elevation
 ```
+
+## First Launch Experience
+
+When users first install and open the app, they are greeted with a **3-page welcome wizard** that:
+
+1. **Page 1 - Welcome**: Introduction to AllOurThings
+2. **Page 2 - Features**: Explains key features (manual uploads, AI chat, citations)
+3. **Page 3 - Get Started**: Encourages users to add their first item
+
+After completing the wizard, users are taken to the main app. The onboarding state is stored in `UserDefaults` using the key `hasCompletedOnboarding`.
+
+### Resetting Onboarding (for Testing)
+
+To see the welcome screen again (useful for testing or development):
+
+**Option 1 - Delete and reinstall the app**
+
+**Option 2 - Reset UserDefaults**
+```swift
+// In Xcode console or add temporarily to code:
+UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+```
+
+**Option 3 - Clear app data**
+- Long press the app icon
+- Select "Remove App" → "Delete App"
+- Reinstall from Xcode
 
 ## Development Notes
 

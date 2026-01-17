@@ -9,6 +9,8 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @State private var hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+
     init() {
         // Configure tab bar appearance for cosy aesthetic
         let tabBarAppearance = UITabBarAppearance()
@@ -22,6 +24,16 @@ struct ContentView: View {
     }
 
     var body: some View {
+        Group {
+            if hasCompletedOnboarding {
+                mainTabView
+            } else {
+                WelcomeView(hasCompletedOnboarding: $hasCompletedOnboarding)
+            }
+        }
+    }
+
+    private var mainTabView: some View {
         TabView {
             ItemListView()
                 .tabItem {
