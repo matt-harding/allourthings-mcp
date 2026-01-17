@@ -4,7 +4,7 @@ import CoreGraphics
 enum Constants {
     enum Storage {
         static let manualsDirectory = "Manuals"
-        static let pixelArtDirectory = "PixelArtImages"
+        static let imagesDirectory = "Images"
     }
 
     enum Keychain {
@@ -21,11 +21,7 @@ enum Constants {
         }
     }
 
-    enum PixelArt {
-        static let defaultPixelScale: CGFloat = 8.0
-        static let maxImageDimension: CGFloat = 1024
-        static let colorPosterizeLevels: CGFloat = 6.0
-        static let sharpenIntensity: CGFloat = 0.8
+    enum Image {
         static let jpegCompressionQuality: CGFloat = 0.8
     }
 

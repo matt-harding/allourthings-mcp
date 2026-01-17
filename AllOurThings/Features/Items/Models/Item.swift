@@ -25,12 +25,12 @@ final class Item {
     var manualFileName: String?
     var manualFilePath: String?
 
-    // Pixel Art Image fields
-    var pixelArtImageData: Data?
-    var pixelArtFileName: String?
-    var pixelArtFilePath: String?
+    // Image fields
+    var imageData: Data?
+    var imageFileName: String?
+    var imageFilePath: String?
 
-    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, pixelArtImageData: Data? = nil, pixelArtFileName: String? = nil, pixelArtFilePath: String? = nil) {
+    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, imageData: Data? = nil, imageFileName: String? = nil, imageFilePath: String? = nil) {
         self.name = name
         self.manufacturer = manufacturer
         self.modelNumber = modelNumber
@@ -42,9 +42,9 @@ final class Item {
         self.manualText = manualText
         self.manualFileName = manualFileName
         self.manualFilePath = manualFilePath
-        self.pixelArtImageData = pixelArtImageData
-        self.pixelArtFileName = pixelArtFileName
-        self.pixelArtFilePath = pixelArtFilePath
+        self.imageData = imageData
+        self.imageFileName = imageFileName
+        self.imageFilePath = imageFilePath
         self.timestamp = Date()
     }
 

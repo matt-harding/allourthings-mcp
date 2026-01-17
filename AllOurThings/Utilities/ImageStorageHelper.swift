@@ -16,7 +16,7 @@ class ImageStorageHelper {
             return nil
         }
 
-        let imagesDirectory = documentsDirectory.appendingPathComponent(Constants.Storage.pixelArtDirectory, isDirectory: true)
+        let imagesDirectory = documentsDirectory.appendingPathComponent(Constants.Storage.imagesDirectory, isDirectory: true)
 
         // Create directory if it doesn't exist
         if !fileManager.fileExists(atPath: imagesDirectory.path) {

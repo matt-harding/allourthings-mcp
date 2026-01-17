@@ -27,13 +27,13 @@ struct AddEditItemView: View {
     @State private var pdfStats: ExtractionStats?
     @State private var pdfError: String?
 
-    // Pixel Art Image fields
-    @State private var pixelArtImageData: Data?
-    @State private var pixelArtFileName: String?
-    @State private var pixelArtFilePath: String?
+    // Image fields
+    @State private var imageData: Data?
+    @State private var imageFileName: String?
+    @State private var imageFilePath: String?
     @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var isGeneratingPixelArt = false
-    @State private var pixelArtError: String?
+    @State private var isSavingImage = false
+    @State private var imageError: String?
     @State private var showingCamera = false
 
     let item: Item?
@@ -61,9 +61,9 @@ struct AddEditItemView: View {
             _manualText = State(initialValue: item.manualText)
             _manualFileName = State(initialValue: item.manualFileName)
             _manualFilePath = State(initialValue: item.manualFilePath)
-            _pixelArtImageData = State(initialValue: item.pixelArtImageData)
-            _pixelArtFileName = State(initialValue: item.pixelArtFileName)
-            _pixelArtFilePath = State(initialValue: item.pixelArtFilePath)
+            _imageData = State(initialValue: item.imageData)
+            _imageFileName = State(initialValue: item.imageFileName)
+            _imageFilePath = State(initialValue: item.imageFilePath)
         }
     }
 
@@ -289,8 +289,8 @@ struct AddEditItemView: View {
                             .padding(.horizontal, Theme.Spacing.medium)
 
                         VStack(spacing: Theme.Spacing.xs) {
-                            // Show pixel art preview if available
-                            if let imageData = pixelArtImageData,
+                            // Show image preview if available
+                            if let imageData = imageData,
                                let uiImage = UIImage(data: imageData) {
                                 VStack(spacing: Theme.Spacing.xs) {
                                     Image(uiImage: uiImage)
@@ -303,7 +303,7 @@ struct AddEditItemView: View {
                                                 .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
                                         )
 
-                                    if let fileName = pixelArtFileName {
+                                    if let fileName = imageFileName {
                                         HStack {
                                             Image(systemName: "photo.fill")
                                                 .foregroundColor(Theme.Colors.softLavender)
@@ -312,7 +312,7 @@ struct AddEditItemView: View {
                                                 .foregroundColor(Theme.Colors.softGray)
                                                 .lineLimit(1)
                                             Spacer()
-                                            Button(action: removePixelArt) {
+                                            Button(action: removeImage) {
                                                 Image(systemName: "xmark.circle.fill")
                                                     .foregroundColor(Theme.Colors.peach)
                                             }
@@ -322,8 +322,8 @@ struct AddEditItemView: View {
                                 }
                             }
 
-                            // Show error if generation failed
-                            if let error = pixelArtError {
+                            // Show error if save failed
+                            if let error = imageError {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .foregroundColor(Theme.Colors.peach)
@@ -337,11 +337,11 @@ struct AddEditItemView: View {
                             }
 
                             // Photo action buttons
-                            if isGeneratingPixelArt {
+                            if isSavingImage {
                                 HStack {
                                     ProgressView()
                                         .tint(Theme.Colors.cocoaBrown)
-                                    Text("Generating Pixel Art...")
+                                    Text("Saving Image...")
                                 }
                                 .font(Theme.Fonts.cosyBody())
                                 .foregroundColor(Theme.Colors.cocoaBrown)
@@ -501,43 +501,30 @@ struct AddEditItemView: View {
 
     private func processImageData(_ imageData: Data, fileName: String) async {
         await MainActor.run {
-            isGeneratingPixelArt = true
-            pixelArtError = nil
-        }
-
-        // Convert to pixel art using local processor
-        let pixelArtData = await Task.detached {
-            PixelArtProcessor.shared.convertToPixelArt(imageData: imageData)
-        }.value
-
-        guard let pixelArtData = pixelArtData else {
-            await MainActor.run {
-                pixelArtError = "Failed to convert to pixel art"
-                isGeneratingPixelArt = false
-            }
-            return
+            isSavingImage = true
+            imageError = nil
         }
 
         // Save to disk
-        guard let savedPath = ImageStorageHelper.shared.saveImage(pixelArtData, originalFileName: fileName) else {
+        guard let savedPath = ImageStorageHelper.shared.saveImage(imageData, originalFileName: fileName) else {
             await MainActor.run {
-                pixelArtError = "Failed to save pixel art"
-                isGeneratingPixelArt = false
+                imageError = "Failed to save image"
+                isSavingImage = false
             }
             return
         }
 
         await MainActor.run {
             // Delete old image if replacing
-            if let oldPath = pixelArtFilePath {
+            if let oldPath = imageFilePath {
                 ImageStorageHelper.shared.deleteImage(at: oldPath)
             }
 
             // Update state
-            pixelArtImageData = pixelArtData
-            pixelArtFileName = fileName
-            pixelArtFilePath = savedPath
-            isGeneratingPixelArt = false
+            self.imageData = imageData
+            self.imageFileName = fileName
+            self.imageFilePath = savedPath
+            isSavingImage = false
         }
     }
 
@@ -546,15 +533,15 @@ struct AddEditItemView: View {
 
         do {
             // Load image data from PhotosPickerItem
-            guard let imageData = try await photoItem.loadTransferable(type: Data.self) else {
+            guard let loadedImageData = try await photoItem.loadTransferable(type: Data.self) else {
                 await MainActor.run {
-                    pixelArtError = "Failed to load image"
-                    isGeneratingPixelArt = false
+                    imageError = "Failed to load image"
+                    isSavingImage = false
                 }
                 return
             }
 
-            await processImageData(imageData, fileName: Constants.FileNames.photoFileName())
+            await processImageData(loadedImageData, fileName: Constants.FileNames.photoFileName())
 
             await MainActor.run {
                 selectedPhotoItem = nil
@@ -562,23 +549,23 @@ struct AddEditItemView: View {
 
         } catch {
             await MainActor.run {
-                pixelArtError = "An unexpected error occurred"
-                isGeneratingPixelArt = false
+                imageError = "An unexpected error occurred"
+                isSavingImage = false
                 selectedPhotoItem = nil
             }
         }
     }
 
-    private func removePixelArt() {
+    private func removeImage() {
         // Delete the image file
-        if let filePath = pixelArtFilePath {
+        if let filePath = imageFilePath {
             ImageStorageHelper.shared.deleteImage(at: filePath)
         }
 
-        pixelArtImageData = nil
-        pixelArtFileName = nil
-        pixelArtFilePath = nil
-        pixelArtError = nil
+        imageData = nil
+        imageFileName = nil
+        imageFilePath = nil
+        imageError = nil
     }
 
     private func handleCameraCapture(_ image: UIImage) {
@@ -587,10 +574,10 @@ struct AddEditItemView: View {
             let orientationFixedImage = image.fixedOrientation()
 
             // Convert UIImage to Data
-            guard let imageData = orientationFixedImage.jpegData(compressionQuality: Constants.PixelArt.jpegCompressionQuality) else {
+            guard let imageData = orientationFixedImage.jpegData(compressionQuality: Constants.Image.jpegCompressionQuality) else {
                 await MainActor.run {
-                    pixelArtError = "Failed to process camera image"
-                    isGeneratingPixelArt = false
+                    imageError = "Failed to process camera image"
+                    isSavingImage = false
                 }
                 return
             }
@@ -613,9 +600,9 @@ struct AddEditItemView: View {
             item.manualText = manualText
             item.manualFileName = manualFileName
             item.manualFilePath = manualFilePath
-            item.pixelArtImageData = pixelArtImageData
-            item.pixelArtFileName = pixelArtFileName
-            item.pixelArtFilePath = pixelArtFilePath
+            item.imageData = imageData
+            item.imageFileName = imageFileName
+            item.imageFilePath = imageFilePath
         } else {
             // Create new item
             let newItem = Item(
@@ -630,9 +617,9 @@ struct AddEditItemView: View {
                 manualText: manualText,
                 manualFileName: manualFileName,
                 manualFilePath: manualFilePath,
-                pixelArtImageData: pixelArtImageData,
-                pixelArtFileName: pixelArtFileName,
-                pixelArtFilePath: pixelArtFilePath
+                imageData: imageData,
+                imageFileName: imageFileName,
+                imageFilePath: imageFilePath
             )
             modelContext.insert(newItem)
         }

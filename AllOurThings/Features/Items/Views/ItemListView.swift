@@ -119,7 +119,7 @@ struct ItemListView: View {
     private func deleteItem(_ item: Item) {
         withAnimation {
             // Delete associated files first
-            if let imagePath = item.pixelArtFilePath {
+            if let imagePath = item.imageFilePath {
                 ImageStorageHelper.shared.deleteImage(at: imagePath)
             }
             if let pdfPath = item.manualFilePath {
@@ -145,11 +145,11 @@ struct ItemRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Image Section (pixel art or placeholder)
+            // Image Section (or placeholder)
             ZStack {
-                if let imageData = item.pixelArtImageData,
+                if let imageData = item.imageData,
                    let uiImage = UIImage(data: imageData) {
-                    // Show pixel art image
+                    // Show image
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
@@ -252,8 +252,8 @@ struct ItemDetailView: View {
                     }
                 }
 
-                // Pixel Art Image Section
-                if let imageData = item.pixelArtImageData,
+                // Image Section
+                if let imageData = item.imageData,
                    let uiImage = UIImage(data: imageData) {
                     VStack(spacing: 0) {
                         Image(uiImage: uiImage)
