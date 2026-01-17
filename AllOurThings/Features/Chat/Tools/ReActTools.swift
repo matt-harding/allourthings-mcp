@@ -1,6 +1,9 @@
 import Foundation
 import FoundationModels
 import SwiftData
+import OSLog
+
+private let logger = Logger(subsystem: "com.allourhings.chat", category: "Tools")
 
 // MARK: - Search Items Tool
 
@@ -27,8 +30,13 @@ struct SearchItemsTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        print("🔍 [SearchItemsTool] Called with query: '\(arguments.query)', maxResults: \(arguments.maxResults)")
-        print("🔍 [SearchItemsTool] Total items available: \(items.count)")
+        print("========================================")
+        print("🔍 SEARCH ITEMS TOOL CALLED")
+        print("Query: \(arguments.query)")
+        print("Items count: \(items.count)")
+        print("========================================")
+        logger.info("🔍 [SearchItemsTool] Called with query: '\(arguments.query)', maxResults: \(arguments.maxResults)")
+        logger.info("🔍 [SearchItemsTool] Total items available: \(items.count)")
 
         do {
             let results = try SemanticSearchHelper.shared.searchItems(
@@ -37,17 +45,17 @@ struct SearchItemsTool: Tool {
                 maxResults: arguments.maxResults
             )
 
-            print("🔍 [SearchItemsTool] Found \(results.count) results")
+            logger.info("🔍 [SearchItemsTool] Found \(results.count) results")
 
             if results.isEmpty {
-                print("⚠️ [SearchItemsTool] No results found")
+                logger.warning("⚠️ [SearchItemsTool] No results found")
                 return "No relevant items found for query: '\(arguments.query)'"
             }
 
             let formattedResults = results.enumerated().map { index, scoredItem in
                 let item = scoredItem.item
                 let hasManual = item.manualText != nil && !item.manualText!.isEmpty
-                print("  ✓ Result \(index + 1): \(item.name) (relevance: \(String(format: "%.1f%%", scoredItem.percentageScore)), hasManual: \(hasManual))")
+                logger.info("  ✓ Result \(index + 1): \(item.name) (relevance: \(String(format: "%.1f%%", scoredItem.percentageScore)), hasManual: \(hasManual))")
                 return """
                 \(index + 1). \(item.name)
                    Category: \(item.category.isEmpty ? "Uncategorized" : item.category)
@@ -59,10 +67,10 @@ struct SearchItemsTool: Tool {
             }.joined(separator: "\n\n")
 
             let response = "Found \(results.count) relevant item(s):\n\n\(formattedResults)"
-            print("✅ [SearchItemsTool] Returning response")
+            logger.info("✅ [SearchItemsTool] Returning response")
             return response
         } catch {
-            print("❌ [SearchItemsTool] Error: \(error.localizedDescription)")
+            logger.error("❌ [SearchItemsTool] Error: \(error.localizedDescription)")
             return "Error searching items: \(error.localizedDescription)"
         }
     }
@@ -90,25 +98,25 @@ struct ListManualSectionsTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        print("📋 [ListManualSectionsTool] Called with itemName: '\(arguments.itemName)'")
+        logger.info("📋 [ListManualSectionsTool] Called with itemName: '\(arguments.itemName)'")
 
         // Find item
         let descriptor = FetchDescriptor<Item>()
         guard let items = try? modelContext.fetch(descriptor) else {
-            print("❌ [ListManualSectionsTool] Error fetching items from database")
+            logger.error("❌ [ListManualSectionsTool] Error fetching items from database")
             return "Error fetching items from database."
         }
 
-        print("📋 [ListManualSectionsTool] Total items in database: \(items.count)")
+        logger.info("📋 [ListManualSectionsTool] Total items in database: \(items.count)")
 
         guard let item = items.first(where: {
             $0.name.lowercased().contains(arguments.itemName.lowercased())
         }) else {
-            print("❌ [ListManualSectionsTool] Item '\(arguments.itemName)' not found")
+            logger.error("❌ [ListManualSectionsTool] Item '\(arguments.itemName)' not found")
             return "Item '\(arguments.itemName)' not found."
         }
 
-        print("📋 [ListManualSectionsTool] Found item: '\(item.name)'")
+        logger.info("📋 [ListManualSectionsTool] Found item: '\(item.name)'")
 
         // Fetch sections for this item
         let itemId = item.id
@@ -120,24 +128,24 @@ struct ListManualSectionsTool: Tool {
         }
 
         guard let sections = try? modelContext.fetch(sectionDescriptor) else {
-            print("❌ [ListManualSectionsTool] Error fetching manual sections")
+            logger.error("❌ [ListManualSectionsTool] Error fetching manual sections")
             return "Error fetching manual sections."
         }
 
-        print("📋 [ListManualSectionsTool] Found \(sections.count) sections for item")
+        logger.info("📋 [ListManualSectionsTool] Found \(sections.count) sections for item")
 
         if sections.isEmpty {
-            print("⚠️ [ListManualSectionsTool] No manual sections available for '\(item.name)'")
+            logger.warning("⚠️ [ListManualSectionsTool] No manual sections available for '\(item.name)'")
             return "Item '\(item.name)' has no manual sections available."
         }
 
         let sectionList = sections.enumerated().map { index, section in
-            print("  ✓ Section \(index + 1): \(section.displayHeading) (\(section.pageRange))")
+            logger.info("  ✓ Section \(index + 1): \(section.displayHeading) (\(section.pageRange))")
             return "\(index + 1). \(section.displayHeading) (\(section.pageRange))"
         }.joined(separator: "\n")
 
         let response = "Manual sections for '\(item.name)' (\(sections.count) sections):\n\(sectionList)"
-        print("✅ [ListManualSectionsTool] Returning response")
+        logger.info("✅ [ListManualSectionsTool] Returning response")
         return response
     }
 }
@@ -167,23 +175,23 @@ struct GetManualSectionTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        print("📖 [GetManualSectionTool] Called with itemName: '\(arguments.itemName)', sectionHeading: '\(arguments.sectionHeading)'")
+        logger.info("📖 [GetManualSectionTool] Called with itemName: '\(arguments.itemName)', sectionHeading: '\(arguments.sectionHeading)'")
 
         // Find item
         let descriptor = FetchDescriptor<Item>()
         guard let items = try? modelContext.fetch(descriptor) else {
-            print("❌ [GetManualSectionTool] Error fetching items from database")
+            logger.error("❌ [GetManualSectionTool] Error fetching items from database")
             return "Error fetching items from database."
         }
 
         guard let item = items.first(where: {
             $0.name.lowercased().contains(arguments.itemName.lowercased())
         }) else {
-            print("❌ [GetManualSectionTool] Item '\(arguments.itemName)' not found")
+            logger.error("❌ [GetManualSectionTool] Item '\(arguments.itemName)' not found")
             return "Item '\(arguments.itemName)' not found."
         }
 
-        print("📖 [GetManualSectionTool] Found item: '\(item.name)'")
+        logger.info("📖 [GetManualSectionTool] Found item: '\(item.name)'")
 
         // Fetch sections for this item
         let itemId = item.id
@@ -193,23 +201,23 @@ struct GetManualSectionTool: Tool {
         }
 
         guard let sections = try? modelContext.fetch(sectionDescriptor) else {
-            print("❌ [GetManualSectionTool] Error fetching manual sections")
+            logger.error("❌ [GetManualSectionTool] Error fetching manual sections")
             return "Error fetching manual sections."
         }
 
-        print("📖 [GetManualSectionTool] Found \(sections.count) sections for item")
+        logger.info("📖 [GetManualSectionTool] Found \(sections.count) sections for item")
 
         // Find matching section
         guard let section = sections.first(where: {
             $0.heading.lowercased().contains(arguments.sectionHeading.lowercased())
         }) else {
             let availableSections = sections.map { $0.heading }.joined(separator: ", ")
-            print("❌ [GetManualSectionTool] Section '\(arguments.sectionHeading)' not found. Available: \(availableSections)")
+            logger.error("❌ [GetManualSectionTool] Section '\(arguments.sectionHeading)' not found. Available: \(availableSections)")
             return "Section '\(arguments.sectionHeading)' not found. Available sections: \(availableSections)"
         }
 
-        print("📖 [GetManualSectionTool] Found section: '\(section.heading)' with \(section.content.count) characters")
-        print("📖 [GetManualSectionTool] Page numbers: \(section.pageNumbers)")
+        logger.info("📖 [GetManualSectionTool] Found section: '\(section.heading)' with \(section.content.count) characters")
+        logger.info("📖 [GetManualSectionTool] Page numbers: \(section.pageNumbers)")
 
         let response = """
         Section: \(section.heading)
@@ -217,7 +225,7 @@ struct GetManualSectionTool: Tool {
 
         \(section.content)
         """
-        print("✅ [GetManualSectionTool] Returning section content")
+        logger.info("✅ [GetManualSectionTool] Returning section content")
         return response
     }
 }
@@ -248,7 +256,7 @@ struct SearchManualSectionsTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         let maxResults = arguments.maxResults
-        print("🔎 [SearchManualSectionsTool] Called with query: '\(arguments.query)', maxResults: \(maxResults)")
+        logger.info("🔎 [SearchManualSectionsTool] Called with query: '\(arguments.query)', maxResults: \(maxResults)")
 
         // Fetch all manual sections
         let descriptor = FetchDescriptor<ManualSection>(
@@ -256,14 +264,14 @@ struct SearchManualSectionsTool: Tool {
         )
 
         guard let allSections = try? modelContext.fetch(descriptor) else {
-            print("❌ [SearchManualSectionsTool] Error fetching manual sections")
+            logger.error("❌ [SearchManualSectionsTool] Error fetching manual sections")
             return "Error fetching manual sections."
         }
 
-        print("🔎 [SearchManualSectionsTool] Total sections in database: \(allSections.count)")
+        logger.info("🔎 [SearchManualSectionsTool] Total sections in database: \(allSections.count)")
 
         if allSections.isEmpty {
-            print("⚠️ [SearchManualSectionsTool] No manual sections available")
+            logger.warning("⚠️ [SearchManualSectionsTool] No manual sections available")
             return "No manual sections available in the database."
         }
 
@@ -275,10 +283,10 @@ struct SearchManualSectionsTool: Tool {
                 maxResults: maxResults
             )
 
-            print("🔎 [SearchManualSectionsTool] Found \(results.count) matching sections")
+            logger.info("🔎 [SearchManualSectionsTool] Found \(results.count) matching sections")
 
             if results.isEmpty {
-                print("⚠️ [SearchManualSectionsTool] No relevant sections found")
+                logger.warning("⚠️ [SearchManualSectionsTool] No relevant sections found")
                 return "No relevant manual sections found for query: '\(arguments.query)'"
             }
 
@@ -292,7 +300,7 @@ struct SearchManualSectionsTool: Tool {
                 let itemName = itemsDict[section.itemId] ?? "Unknown Item"
                 let preview = String(section.content.prefix(200))
 
-                print("  ✓ Result \(index + 1): \(section.heading) from '\(itemName)' (relevance: \(String(format: "%.1f%%", scoredSection.percentageScore)))")
+                logger.info("  ✓ Result \(index + 1): \(section.heading) from '\(itemName)' (relevance: \(String(format: "%.1f%%", scoredSection.percentageScore)))")
 
                 return """
                 \(index + 1). \(section.heading) (from \(itemName))
@@ -303,10 +311,10 @@ struct SearchManualSectionsTool: Tool {
             }.joined(separator: "\n\n")
 
             let response = "Found \(results.count) relevant section(s):\n\n\(formattedResults)"
-            print("✅ [SearchManualSectionsTool] Returning response")
+            logger.info("✅ [SearchManualSectionsTool] Returning response")
             return response
         } catch {
-            print("❌ [SearchManualSectionsTool] Error: \(error.localizedDescription)")
+            logger.error("❌ [SearchManualSectionsTool] Error: \(error.localizedDescription)")
             return "Error searching sections: \(error.localizedDescription)"
         }
     }

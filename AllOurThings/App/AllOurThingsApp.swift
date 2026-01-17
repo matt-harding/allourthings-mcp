@@ -7,9 +7,20 @@
 
 import SwiftUI
 import SwiftData
+import OSLog
+
+private let logger = Logger(subsystem: "com.allourhings.app", category: "Startup")
 
 @main
 struct AllOurThingsApp: App {
+
+    init() {
+        // THIS SHOULD APPEAR IMMEDIATELY WHEN APP STARTS
+        print("========================================")
+        print("🚀 APP STARTING - PRINT STATEMENT TEST")
+        print("========================================")
+        logger.info("🚀 APP STARTING - LOGGER TEST")
+    }
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,

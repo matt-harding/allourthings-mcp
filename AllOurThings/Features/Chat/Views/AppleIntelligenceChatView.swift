@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 import Foundation
 import FoundationModels
+import OSLog
+
+private let logger = Logger(subsystem: "com.allourhings.chat", category: "ChatView")
 
 struct AppleIntelligenceChatView: View {
     @Environment(\.modelContext) private var modelContext
@@ -259,9 +262,13 @@ struct AppleIntelligenceChatView: View {
     // MARK: - Functions
 
     private func setupSession() {
-        print("🤖 [AppleIntelligenceChatView] Setting up session...")
+        print("========================================")
+        print("🤖 SETUP SESSION CALLED")
+        print("========================================")
+        logger.info("🤖 [AppleIntelligenceChatView] Setting up session...")
         guard case .available = model.availability else {
-            print("⚠️ [AppleIntelligenceChatView] Model not available, skipping session setup")
+            print("⚠️ Model not available")
+            logger.warning("⚠️ [AppleIntelligenceChatView] Model not available, skipping session setup")
             return
         }
 
@@ -292,18 +299,21 @@ struct AppleIntelligenceChatView: View {
             SearchManualSectionsTool(modelContext: modelContext)
         ]
 
-        print("🤖 [AppleIntelligenceChatView] Created \(tools.count) tools for session")
-        print("🤖 [AppleIntelligenceChatView] Current items count: \(items.count)")
+        logger.info("🤖 [AppleIntelligenceChatView] Created \(tools.count) tools for session")
+        logger.info("🤖 [AppleIntelligenceChatView] Current items count: \(items.count)")
 
         session = LanguageModelSession(tools: tools, instructions: instructions)
-        print("✅ [AppleIntelligenceChatView] Session setup complete")
+        logger.info("✅ [AppleIntelligenceChatView] Session setup complete")
     }
 
     private func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isProcessing else { return }
 
-        print("💬 [AppleIntelligenceChatView] Sending message: '\(text)'")
+        print("========================================")
+        print("💬 SENDING MESSAGE: \(text)")
+        print("========================================")
+        logger.info("💬 [AppleIntelligenceChatView] Sending message: '\(text)'")
 
         // Collect items with manuals (for citation linking)
         let manualsRefs = items.compactMap { item -> ItemManualReference? in
@@ -311,7 +321,7 @@ struct AppleIntelligenceChatView: View {
             return ItemManualReference(itemName: item.name, manualFilePath: filePath)
         }
 
-        print("💬 [AppleIntelligenceChatView] Found \(manualsRefs.count) items with manual references")
+        logger.info("💬 [AppleIntelligenceChatView] Found \(manualsRefs.count) items with manual references")
 
         // Add user message
         let userMessage = ChatMessage(text: text, isUser: true, itemsWithManuals: manualsRefs)
@@ -326,33 +336,33 @@ struct AppleIntelligenceChatView: View {
         Task {
             do {
                 guard let session = session else {
-                    print("❌ [AppleIntelligenceChatView] Session not initialized")
+                    logger.error("❌ [AppleIntelligenceChatView] Session not initialized")
                     throw NSError(domain: "AppleIntelligenceChat", code: 1, userInfo: [NSLocalizedDescriptionKey: "Session not initialized"])
                 }
 
                 // Check if session is already responding
                 if session.isResponding {
-                    print("⚠️ [AppleIntelligenceChatView] Session already responding")
+                    logger.warning("⚠️ [AppleIntelligenceChatView] Session already responding")
                     throw NSError(domain: "AppleIntelligenceChat", code: 2, userInfo: [NSLocalizedDescriptionKey: "Session is already processing a request"])
                 }
 
-                print("🤖 [AppleIntelligenceChatView] Waiting for response from model...")
+                logger.info("🤖 [AppleIntelligenceChatView] Waiting for response from model...")
 
                 // Send message - session will automatically use tools as needed
                 let response = try await session.respond(to: text)
 
-                print("✅ [AppleIntelligenceChatView] Received response (length: \(response.content.count))")
-                print("📝 [AppleIntelligenceChatView] Response: \(response.content)")
+                logger.info("✅ [AppleIntelligenceChatView] Received response (length: \(response.content.count))")
+                logger.info("📝 [AppleIntelligenceChatView] Response: \(response.content)")
 
                 // Add AI response
                 await MainActor.run {
                     let aiMessage = ChatMessage(text: response.content, isUser: false, itemsWithManuals: manualsRefs)
                     messages.append(aiMessage)
                     isProcessing = false
-                    print("✅ [AppleIntelligenceChatView] Message processing complete")
+                    logger.info("✅ [AppleIntelligenceChatView] Message processing complete")
                 }
             } catch {
-                print("❌ [AppleIntelligenceChatView] Error: \(error.localizedDescription)")
+                logger.error("❌ [AppleIntelligenceChatView] Error: \(error.localizedDescription)")
                 await MainActor.run {
                     let errorMsg = ChatMessage(
                         text: "Sorry, I encountered an error: \(error.localizedDescription)",
@@ -374,26 +384,26 @@ struct AppleIntelligenceChatView: View {
     }
 
     private func handleCitationTap(url: URL, itemsWithManuals: [ItemManualReference]) {
-        print("🔗 [AppleIntelligenceChatView] Citation tapped: \(url)")
+        logger.info("🔗 [AppleIntelligenceChatView] Citation tapped: \(url)")
 
         guard url.scheme == "manual",
               url.host == "page",
               let pageString = url.pathComponents.last,
               let pageNumber = Int(pageString) else {
-            print("⚠️ [AppleIntelligenceChatView] Invalid citation URL format")
+            logger.warning("⚠️ [AppleIntelligenceChatView] Invalid citation URL format")
             return
         }
 
-        print("🔗 [AppleIntelligenceChatView] Parsed page number: \(pageNumber)")
-        print("🔗 [AppleIntelligenceChatView] Available manuals: \(itemsWithManuals.count)")
+        logger.info("🔗 [AppleIntelligenceChatView] Parsed page number: \(pageNumber)")
+        logger.info("🔗 [AppleIntelligenceChatView] Available manuals: \(itemsWithManuals.count)")
 
         // If only one manual, open it directly
         guard let firstManual = itemsWithManuals.first else {
-            print("⚠️ [AppleIntelligenceChatView] No manuals available to open")
+            logger.warning("⚠️ [AppleIntelligenceChatView] No manuals available to open")
             return
         }
 
-        print("📱 [AppleIntelligenceChatView] Opening PDF: \(firstManual.itemName) at page \(pageNumber)")
+        logger.info("📱 [AppleIntelligenceChatView] Opening PDF: \(firstManual.itemName) at page \(pageNumber)")
 
         // Create PDF viewer data and present
         pdfToShow = PDFViewerData(
@@ -484,12 +494,12 @@ struct MessageBubble: View {
         let pattern = "\\(pages? (\\d+)(?:-(\\d+))?\\)"
 
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
-            print("⚠️ [MessageBubble] Failed to create regex for citation parsing")
+            logger.warning("⚠️ [MessageBubble] Failed to create regex for citation parsing")
             return attributedString
         }
 
         let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
-        print("📎 [MessageBubble] Found \(matches.count) citation(s) in message")
+        logger.info("📎 [MessageBubble] Found \(matches.count) citation(s) in message")
 
         // Process matches in reverse to maintain correct indices
         for match in matches.reversed() {
@@ -500,7 +510,7 @@ struct MessageBubble: View {
             guard let pageRange = Range(pageNumberRange, in: text) else { continue }
             let pageNumber = String(text[pageRange])
 
-            print("  ✓ Creating citation link for page \(pageNumber)")
+            logger.info("  ✓ Creating citation link for page \(pageNumber)")
 
             // Create link URL with custom scheme
             if let attrRange = Range(range, in: attributedString) {
