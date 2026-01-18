@@ -11,7 +11,8 @@ struct AddEditItemView: View {
     @State private var name = ""
     @State private var manufacturer = ""
     @State private var modelNumber = ""
-    @State private var category = ""
+    @State private var categorySelection = ""
+    @State private var customCategory = ""
     @State private var location = ""
     @State private var notes = ""
     @State private var purchaseDate: Date?
@@ -29,6 +30,7 @@ struct AddEditItemView: View {
     @State private var pdfError: String?
     @State private var temporarySections: [SectionData] = []
     @State private var isExtractingFeatures = false
+    @State private var pdfProcessingStage: String?
     @State private var temporaryFeatures: [ItemFeature] = []
 
     // Image fields
@@ -46,9 +48,45 @@ struct AddEditItemView: View {
         item != nil
     }
 
+    private let categoryOptions = [
+        "Kitchen Appliance",
+        "Laundry Appliance",
+        "Cleaning Appliance",
+        "Heating/Cooling",
+        "Smart Home Device",
+        "Home Entertainment",
+        "Computer/Networking",
+        "Mobile Device",
+        "Wearable",
+        "Camera/Imaging",
+        "Audio",
+        "Gaming",
+        "Personal Care",
+        "Power Tool",
+        "Outdoor Equipment",
+        "Vehicle Accessory",
+        "Other"
+    ]
+
+    private var resolvedCategory: String {
+        if categorySelection == "Other" {
+            return customCategory.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return categorySelection
+    }
+
+    private var capabilities: [ItemFeature] {
+        temporaryFeatures.filter { $0.type == .capability }
+    }
+
+    private var specifications: [ItemFeature] {
+        temporaryFeatures.filter { $0.type == .specification }
+    }
+
     var isSaveDisabled: Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        resolvedCategory.isEmpty
     }
 
     init(item: Item? = nil) {
@@ -57,7 +95,6 @@ struct AddEditItemView: View {
             _name = State(initialValue: item.name)
             _manufacturer = State(initialValue: item.manufacturer)
             _modelNumber = State(initialValue: item.modelNumber)
-            _category = State(initialValue: item.category)
             _location = State(initialValue: item.location)
             _notes = State(initialValue: item.notes)
             _purchaseDate = State(initialValue: item.purchaseDate)
@@ -69,6 +106,16 @@ struct AddEditItemView: View {
             _imageFileName = State(initialValue: item.imageFileName)
             _imageFilePath = State(initialValue: item.imageFilePath)
             _temporaryFeatures = State(initialValue: item.features)
+            if categoryOptions.contains(item.category) {
+                _categorySelection = State(initialValue: item.category)
+                _customCategory = State(initialValue: "")
+            } else if item.category.isEmpty {
+                _categorySelection = State(initialValue: "")
+                _customCategory = State(initialValue: "")
+            } else {
+                _categorySelection = State(initialValue: "Other")
+                _customCategory = State(initialValue: item.category)
+            }
         }
     }
 
@@ -87,6 +134,35 @@ struct AddEditItemView: View {
                             // Name field (required)
                             RequiredFieldView(label: "Name", placeholder: "Enter item name", text: $name)
 
+                            // Category field (required)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                Text("Category")
+                                    .font(Theme.Fonts.cosySubheadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+
+                                Picker("Category", selection: $categorySelection) {
+                                    Text("Select a category").tag("")
+                                    ForEach(categoryOptions, id: \.self) { option in
+                                        Text(option).tag(option)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .padding(Theme.Spacing.small)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Theme.Colors.warmCream)
+                                .cornerRadius(Theme.CornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                        .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                )
+
+                                if categorySelection == "Other" {
+                                    CozyTextField(placeholder: "Enter category", text: $customCategory)
+                                }
+                            }
+
                             // Manufacturer field (required)
                             RequiredFieldView(label: "Manufacturer", placeholder: "Enter manufacturer name", text: $manufacturer)
 
@@ -96,14 +172,6 @@ struct AddEditItemView: View {
                                     .font(Theme.Fonts.cosySubheadline())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
                                 CozyTextField(placeholder: "Enter serial number (optional)", text: $modelNumber)
-                            }
-
-                            // Category field (optional)
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                Text("Category")
-                                    .font(Theme.Fonts.cosySubheadline())
-                                    .foregroundColor(Theme.Colors.cocoaBrown)
-                                CozyTextField(placeholder: "e.g., Electronics, Appliance", text: $category)
                             }
 
                             // Location field (optional)
@@ -209,6 +277,89 @@ struct AddEditItemView: View {
                             )
                     }
 
+                    // Features Section
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Key Features")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.mutedPlum)
+                            .padding(.horizontal, Theme.Spacing.medium)
+
+                        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                            Text("Capabilities")
+                                .font(Theme.Fonts.cosySubheadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+
+                            ForEach(capabilities, id: \.id) { feature in
+                                if let index = temporaryFeatures.firstIndex(where: { $0.id == feature.id }) {
+                                    HStack(spacing: Theme.Spacing.small) {
+                                        TextField("Capability", text: $temporaryFeatures[index].text)
+                                            .font(Theme.Fonts.cosyBody())
+                                            .foregroundColor(Theme.Colors.cocoaBrown)
+                                            .padding(.horizontal, Theme.Spacing.small)
+                                            .padding(.vertical, Theme.Spacing.xs)
+                                            .background(Theme.Colors.warmCream)
+                                            .cornerRadius(Theme.CornerRadius.medium)
+
+                                        Button(action: { removeFeature(id: feature.id) }) {
+                                            Image(systemName: "trash")
+                                                .foregroundColor(Theme.Colors.peach)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Button(action: addCapability) {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundColor(Theme.Colors.mintGreen)
+                                    Text("Add Capability")
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                }
+                            }
+                            .padding(.top, Theme.Spacing.xs)
+
+                            Divider()
+                                .background(Theme.Colors.gentleBorder)
+                                .padding(.vertical, Theme.Spacing.xs)
+
+                            Text("Specifications")
+                                .font(Theme.Fonts.cosySubheadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+
+                            ForEach(specifications, id: \.id) { feature in
+                                if let index = temporaryFeatures.firstIndex(where: { $0.id == feature.id }) {
+                                    HStack(spacing: Theme.Spacing.small) {
+                                        TextField("Specification", text: $temporaryFeatures[index].text)
+                                            .font(Theme.Fonts.cosyBody())
+                                            .foregroundColor(Theme.Colors.cocoaBrown)
+                                            .padding(.horizontal, Theme.Spacing.small)
+                                            .padding(.vertical, Theme.Spacing.xs)
+                                            .background(Theme.Colors.warmCream)
+                                            .cornerRadius(Theme.CornerRadius.medium)
+
+                                        Button(action: { removeFeature(id: feature.id) }) {
+                                            Image(systemName: "trash")
+                                                .foregroundColor(Theme.Colors.peach)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Button(action: addSpecification) {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundColor(Theme.Colors.mintGreen)
+                                    Text("Add Specification")
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                }
+                            }
+                            .padding(.top, Theme.Spacing.xs)
+                        }
+                        .cosyCard(padding: Theme.Spacing.medium)
+                    }
+
                     // Manual Section
                     VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                         Text("Manual")
@@ -282,7 +433,7 @@ struct AddEditItemView: View {
                                     if isProcessingPDF {
                                         ProgressView()
                                             .tint(Theme.Colors.cocoaBrown)
-                                        Text("Processing PDF...")
+                                        Text("Processing: \(pdfProcessingStage ?? "Starting")")
                                     } else {
                                         Image(systemName: manualFileName == nil ? "doc.badge.plus" : "arrow.triangle.2.circlepath")
                                         Text(manualFileName == nil ? "Attach Manual (PDF)" : "Replace Manual")
@@ -440,13 +591,19 @@ struct AddEditItemView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { saveItem() }) {
-                        Text("Save")
-                            .font(Theme.Fonts.cosyButton())
-                            .foregroundColor(isSaveDisabled ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
-                            .padding(.horizontal, Theme.Spacing.small)
-                            .padding(.vertical, Theme.Spacing.xs)
-                            .background(isSaveDisabled ? Theme.Colors.softGray.opacity(0.3) : Theme.Colors.mintGreen)
-                            .cornerRadius(Theme.CornerRadius.xl)
+                        if isEditing {
+                            Text("Save")
+                                .font(Theme.Fonts.cosyButton())
+                                .foregroundColor(isSaveDisabled ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
+                                .padding(.horizontal, Theme.Spacing.small)
+                                .padding(.vertical, Theme.Spacing.xs)
+                                .background(isSaveDisabled ? Theme.Colors.softGray.opacity(0.3) : Theme.Colors.mintGreen)
+                                .cornerRadius(Theme.CornerRadius.xl)
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(isSaveDisabled ? Theme.Colors.softGray : Theme.Colors.mintGreen)
+                        }
                     }
                     .disabled(isSaveDisabled)
                     .cosyButtonPress()
@@ -470,6 +627,7 @@ struct AddEditItemView: View {
     private func handleDocumentPicked(_ url: URL) {
         isProcessingPDF = true
         pdfError = nil
+        pdfProcessingStage = "Saving PDF"
 
         Task {
             // First, save the PDF file
@@ -477,29 +635,44 @@ struct AddEditItemView: View {
                 await MainActor.run {
                     isProcessingPDF = false
                     pdfError = "Failed to save PDF file. Please try again."
+                    pdfProcessingStage = nil
                 }
                 return
             }
 
             // Then extract text from the saved PDF
+            await MainActor.run {
+                pdfProcessingStage = "Extracting text"
+            }
             guard let savedURL = PDFStorageHelper.shared.getPDFURL(for: savedPath),
                   let result = PDFTextExtractor.shared.extractEnglishText(from: savedURL) else {
                 await MainActor.run {
                     isProcessingPDF = false
                     pdfError = "Failed to extract text from PDF. The file may be corrupted or password-protected."
+                    pdfProcessingStage = nil
                 }
                 return
             }
 
-            // Extract sections from the text
-            let sections = PDFTextExtractor.shared.extractSections(from: result.text)
+            await MainActor.run {
+                pdfProcessingStage = "Extracting sections"
+            }
+            let model = SystemLanguageModel()
+
+            // Extract sections using Apple Intelligence (fallback to heuristic if unavailable)
+            let extractedSections = await SectionExtractor.shared.extractSections(from: result.text, model: model)
+
+            await MainActor.run {
+                pdfProcessingStage = "Summarizing sections"
+            }
+            let sections = await SectionSummaryExtractor.shared.summarizeSections(extractedSections, model: model)
 
             // Extract features using Apple Intelligence
             await MainActor.run {
                 isExtractingFeatures = true
+                pdfProcessingStage = "Extracting features"
             }
 
-            let model = SystemLanguageModel()
             let features = await FeatureExtractor.shared.extractFeatures(
                 from: result.text,
                 model: model
@@ -518,6 +691,7 @@ struct AddEditItemView: View {
                 pdfStats = result.stats
                 pdfError = nil
                 isProcessingPDF = false
+                pdfProcessingStage = nil
 
                 // Store sections temporarily (will be saved to database on item save)
                 temporarySections = sections
@@ -641,7 +815,7 @@ struct AddEditItemView: View {
             item.name = name
             item.manufacturer = manufacturer
             item.modelNumber = modelNumber
-            item.category = category
+            item.category = resolvedCategory
             item.location = location
             item.notes = notes
             item.purchaseDate = purchaseDate
@@ -652,11 +826,7 @@ struct AddEditItemView: View {
             item.imageData = imageData
             item.imageFileName = imageFileName
             item.imageFilePath = imageFilePath
-
-            // Only update features if new manual was uploaded
-            if !temporarySections.isEmpty {
-                item.features = temporaryFeatures
-            }
+            item.features = cleanedFeatures(from: temporaryFeatures)
 
             savedItem = item
 
@@ -670,7 +840,7 @@ struct AddEditItemView: View {
                 name: name,
                 manufacturer: manufacturer,
                 modelNumber: modelNumber,
-                category: category,
+                category: resolvedCategory,
                 purchaseDate: purchaseDate,
                 warrantyExpirationDate: warrantyExpirationDate,
                 location: location,
@@ -686,7 +856,7 @@ struct AddEditItemView: View {
             savedItem = newItem
 
             // Save features for new item
-            newItem.features = temporaryFeatures
+            newItem.features = cleanedFeatures(from: temporaryFeatures)
         }
 
         // Save sections to database if any
@@ -696,6 +866,7 @@ struct AddEditItemView: View {
                     itemId: savedItem.id,
                     heading: sectionData.heading,
                     content: sectionData.content,
+                    summary: sectionData.summary,
                     pageNumbers: sectionData.pageNumbers,
                     sectionIndex: index,
                     fileName: nil
@@ -711,6 +882,22 @@ struct AddEditItemView: View {
         }
 
         dismiss()
+    }
+
+    private func cleanedFeatures(from features: [ItemFeature]) -> [ItemFeature] {
+        features.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private func addCapability() {
+        temporaryFeatures.append(ItemFeature(type: .capability, text: ""))
+    }
+
+    private func addSpecification() {
+        temporaryFeatures.append(ItemFeature(type: .specification, text: ""))
+    }
+
+    private func removeFeature(id: UUID) {
+        temporaryFeatures.removeAll { $0.id == id }
     }
 
     private func deleteExistingSections(for itemId: UUID) {

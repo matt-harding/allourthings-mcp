@@ -9,6 +9,7 @@ final class ManualSection {
     var itemId: UUID  // Reference to parent Item
     var heading: String
     var content: String
+    var summary: String
     var pageNumbers: [Int]  // Pages this section appears on
     var sectionIndex: Int  // Order in the manual
     var fileName: String?  // Optional: file path if stored separately
@@ -18,6 +19,7 @@ final class ManualSection {
         itemId: UUID,
         heading: String,
         content: String,
+        summary: String = "",
         pageNumbers: [Int],
         sectionIndex: Int,
         fileName: String? = nil
@@ -26,6 +28,7 @@ final class ManualSection {
         self.itemId = itemId
         self.heading = heading
         self.content = content
+        self.summary = summary
         self.pageNumbers = pageNumbers
         self.sectionIndex = sectionIndex
         self.fileName = fileName
@@ -48,7 +51,7 @@ final class ManualSection {
         }
     }
 
-    var summary: String {
+    var previewText: String {
         let preview = content.prefix(100)
         return "\(displayHeading) (\(pageRange)): \(preview)..."
     }

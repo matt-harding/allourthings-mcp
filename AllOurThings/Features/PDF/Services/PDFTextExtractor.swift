@@ -118,7 +118,8 @@ class PDFTextExtractor {
                 currentSection = SectionData(
                     heading: trimmed,
                     content: "",
-                    pageNumbers: []
+                    pageNumbers: [],
+                    summary: ""
                 )
                 // Keep the current page numbers for this new section
             } else if !trimmed.isEmpty {
@@ -128,7 +129,8 @@ class PDFTextExtractor {
                     currentSection = SectionData(
                         heading: "Introduction",
                         content: "",
-                        pageNumbers: Array(currentPageNumbers).sorted()
+                        pageNumbers: Array(currentPageNumbers).sorted(),
+                        summary: ""
                     )
                     currentPageNumbers.removeAll()
                 }
@@ -149,7 +151,8 @@ class PDFTextExtractor {
             sections.append(SectionData(
                 heading: "Manual Content",
                 content: text,
-                pageNumbers: []
+                pageNumbers: [],
+                summary: ""
             ))
         }
 
@@ -237,4 +240,5 @@ struct SectionData {
     var heading: String
     var content: String
     var pageNumbers: [Int]
+    var summary: String
 }

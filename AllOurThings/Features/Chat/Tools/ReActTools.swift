@@ -5,80 +5,6 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.allourhings.chat", category: "Tools")
 
-// MARK: - List Manual Sections Tool
-
-struct ListManualSectionsTool: Tool {
-    let modelContext: ModelContext
-
-    var name: String { "list_manual_sections" }
-
-    var description: String {
-        """
-        Lists all available manual sections for a specific item by name.
-        Use this after finding an item with search_items to see what documentation sections are available.
-        Returns section headings and page numbers.
-        """
-    }
-
-    @Generable
-    struct Arguments {
-        @Guide(description: "The name of the item to list manual sections for")
-        var itemName: String
-    }
-
-    func call(arguments: Arguments) async throws -> String {
-        logger.info("📋 [ListManualSectionsTool] Called with itemName: '\(arguments.itemName)'")
-
-        // Find item
-        let descriptor = FetchDescriptor<Item>()
-        guard let items = try? modelContext.fetch(descriptor) else {
-            logger.error("❌ [ListManualSectionsTool] Error fetching items from database")
-            return "Error fetching items from database."
-        }
-
-        logger.info("📋 [ListManualSectionsTool] Total items in database: \(items.count)")
-
-        guard let item = items.first(where: {
-            $0.name.lowercased().contains(arguments.itemName.lowercased())
-        }) else {
-            logger.error("❌ [ListManualSectionsTool] Item '\(arguments.itemName)' not found")
-            return "Item '\(arguments.itemName)' not found."
-        }
-
-        logger.info("📋 [ListManualSectionsTool] Found item: '\(item.name)'")
-
-        // Fetch sections for this item
-        let itemId = item.id
-        var sectionDescriptor = FetchDescriptor<ManualSection>(
-            sortBy: [SortDescriptor(\.sectionIndex)]
-        )
-        sectionDescriptor.predicate = #Predicate { section in
-            section.itemId == itemId
-        }
-
-        guard let sections = try? modelContext.fetch(sectionDescriptor) else {
-            logger.error("❌ [ListManualSectionsTool] Error fetching manual sections")
-            return "Error fetching manual sections."
-        }
-
-        logger.info("📋 [ListManualSectionsTool] Found \(sections.count) sections for item")
-
-        if sections.isEmpty {
-            logger.warning("⚠️ [ListManualSectionsTool] No manual sections available for '\(item.name)'")
-            return "Item '\(item.name)' has no manual sections available."
-        }
-
-        let sectionList = sections.enumerated().map { index, section in
-            logger.info("  ✓ Section \(index + 1): \(section.displayHeading) (\(section.pageRange))")
-            return "\(index + 1). \(section.displayHeading) (\(section.pageRange))"
-        }.joined(separator: "\n")
-
-        let response = "Manual sections for '\(item.name)' (\(sections.count) sections):\n\(sectionList)"
-        logger.info("✅ [ListManualSectionsTool] Returning response")
-        return response
-    }
-}
-
 // MARK: - Get Manual Section Tool
 
 struct GetManualSectionTool: Tool {
@@ -89,7 +15,7 @@ struct GetManualSectionTool: Tool {
     var description: String {
         """
         Retrieves the full content of a specific manual section by item name and section heading.
-        Use this after listing sections with list_manual_sections to get detailed information.
+        Use this after identifying a relevant section to get detailed information.
         Returns the complete section content with page numbers.
         """
     }
@@ -101,6 +27,9 @@ struct GetManualSectionTool: Tool {
 
         @Guide(description: "The heading of the manual section to retrieve")
         var sectionHeading: String
+
+        @Guide(description: "Maximum number of characters to return from the section content")
+        var maxChars: Int = 1200
     }
 
     func call(arguments: Arguments) async throws -> String {
@@ -113,9 +42,7 @@ struct GetManualSectionTool: Tool {
             return "Error fetching items from database."
         }
 
-        guard let item = items.first(where: {
-            $0.name.lowercased().contains(arguments.itemName.lowercased())
-        }) else {
+        guard let item = bestMatchingItem(for: arguments.itemName, in: items) else {
             logger.error("❌ [GetManualSectionTool] Item '\(arguments.itemName)' not found")
             return "Item '\(arguments.itemName)' not found."
         }
@@ -151,8 +78,13 @@ struct GetManualSectionTool: Tool {
         // Format response to make page numbers very clear for citation
         let pageInfo = section.pageNumbers.isEmpty ? "Page information not available" : section.pageRange
         let response: String
+        let maxChars = max(200, arguments.maxChars)
+        let trimmedContent = section.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let contentPreview = trimmedContent.count > maxChars
+            ? String(trimmedContent.prefix(maxChars)) + "\n\n[Content truncated for brevity]"
+            : trimmedContent
 
-        if section.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if contentPreview.isEmpty {
             // If content is empty, still return page information
             response = """
             Section: \(section.heading)
@@ -165,7 +97,7 @@ struct GetManualSectionTool: Tool {
             Section: \(section.heading)
             \(pageInfo)
 
-            \(section.content)
+            \(contentPreview)
             """
         }
 
@@ -174,18 +106,20 @@ struct GetManualSectionTool: Tool {
     }
 }
 
-// MARK: - Search Manual Sections Tool
+// MARK: - Search Item Manual Sections Tool
 
-struct SearchManualSectionsTool: Tool {
+struct SearchItemManualSectionsTool: Tool {
     let modelContext: ModelContext
+    let itemId: UUID
+    let itemName: String
 
-    var name: String { "search_manual_sections" }
+    var name: String { "search_item_manual_sections" }
 
     var description: String {
         """
-        Searches through ALL manual sections across all items using semantic similarity.
-        Use this when you need to find specific information across multiple manuals.
-        Returns the most relevant sections with their item names and page numbers.
+        Searches manual sections for a specific item using semantic similarity.
+        Use this for item-scoped questions so you don't need to guess the item name.
+        Returns the most relevant sections with page numbers.
         """
     }
 
@@ -200,66 +134,127 @@ struct SearchManualSectionsTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         let maxResults = arguments.maxResults
-        logger.info("🔎 [SearchManualSectionsTool] Called with query: '\(arguments.query)', maxResults: \(maxResults)")
+        logger.info("🔎 [SearchItemManualSectionsTool] Called with query: '\(arguments.query)', maxResults: \(maxResults)")
 
-        // Fetch all manual sections
-        let descriptor = FetchDescriptor<ManualSection>(
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
-        )
-
-        guard let allSections = try? modelContext.fetch(descriptor) else {
-            logger.error("❌ [SearchManualSectionsTool] Error fetching manual sections")
-            return "Error fetching manual sections."
+        var sectionDescriptor = FetchDescriptor<ManualSection>()
+        sectionDescriptor.predicate = #Predicate { section in
+            section.itemId == itemId
         }
 
-        logger.info("🔎 [SearchManualSectionsTool] Total sections in database: \(allSections.count)")
-
-        if allSections.isEmpty {
-            logger.warning("⚠️ [SearchManualSectionsTool] No manual sections available")
-            return "No manual sections available in the database."
+        guard let sections = try? modelContext.fetch(sectionDescriptor) else {
+            logger.error("❌ [SearchItemManualSectionsTool] Error fetching manual sections")
+            return "Error fetching manual sections for '\(itemName)'."
         }
 
-        // Search sections
+        logger.info("🔎 [SearchItemManualSectionsTool] Total sections for item '\(itemName)': \(sections.count)")
+
+        if sections.isEmpty {
+            logger.warning("⚠️ [SearchItemManualSectionsTool] No manual sections available for item '\(itemName)'")
+            return "Item '\(itemName)' has no manual sections available."
+        }
+
         do {
             let results = try SemanticSearchHelper.shared.searchSections(
                 query: arguments.query,
-                in: allSections,
-                maxResults: maxResults
+                in: sections,
+                maxResults: maxResults,
+                minSimilarity: 0.15
             )
 
-            logger.info("🔎 [SearchManualSectionsTool] Found \(results.count) matching sections")
+            logger.info("🔎 [SearchItemManualSectionsTool] Found \(results.count) matching sections")
 
             if results.isEmpty {
-                logger.warning("⚠️ [SearchManualSectionsTool] No relevant sections found")
-                return "No relevant manual sections found for query: '\(arguments.query)'"
+                logger.warning("⚠️ [SearchItemManualSectionsTool] No relevant sections found")
+                return "No relevant manual sections found for '\(itemName)' and query: '\(arguments.query)'"
             }
-
-            // Need to get item names - fetch all items
-            let itemDescriptor = FetchDescriptor<Item>()
-            let items = (try? modelContext.fetch(itemDescriptor)) ?? []
-            let itemsDict = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0.name) })
 
             let formattedResults = results.enumerated().map { index, scoredSection in
                 let section = scoredSection.section
-                let itemName = itemsDict[section.itemId] ?? "Unknown Item"
                 let preview = String(section.content.prefix(200))
 
-                logger.info("  ✓ Result \(index + 1): \(section.heading) from '\(itemName)' (relevance: \(String(format: "%.1f%%", scoredSection.percentageScore)))")
+                logger.info("  ✓ Result \(index + 1): \(section.heading) (relevance: \(String(format: "%.1f%%", scoredSection.percentageScore)))")
 
                 return """
-                \(index + 1). \(section.heading) (from \(itemName))
+                \(index + 1). \(section.heading)
                    \(section.pageRange)
                    Relevance: \(String(format: "%.1f%%", scoredSection.percentageScore))
                    Preview: \(preview)...
                 """
             }.joined(separator: "\n\n")
 
-            let response = "Found \(results.count) relevant section(s):\n\n\(formattedResults)"
-            logger.info("✅ [SearchManualSectionsTool] Returning response")
+            let response = "Found \(results.count) relevant section(s) in '\(itemName)':\n\n\(formattedResults)"
+            logger.info("✅ [SearchItemManualSectionsTool] Returning response")
             return response
         } catch {
-            logger.error("❌ [SearchManualSectionsTool] Error: \(error.localizedDescription)")
+            logger.error("❌ [SearchItemManualSectionsTool] Error: \(error.localizedDescription)")
             return "Error searching sections: \(error.localizedDescription)"
         }
     }
+}
+
+// MARK: - Fuzzy Item Matching
+
+private func bestMatchingItem(for query: String, in items: [Item]) -> Item? {
+    let normalizedQuery = normalizeMatchString(query)
+    if normalizedQuery.isEmpty {
+        return nil
+    }
+
+    if let exact = items.first(where: { normalizeMatchString($0.name).contains(normalizedQuery) }) {
+        return exact
+    }
+
+    var bestItem: Item?
+    var bestDistance = Int.max
+
+    for item in items {
+        let candidate = normalizeMatchString(item.name)
+        guard !candidate.isEmpty else { continue }
+        let distance = levenshteinDistance(normalizedQuery, candidate)
+        if distance < bestDistance {
+            bestDistance = distance
+            bestItem = item
+        }
+    }
+
+    guard let match = bestItem else { return nil }
+    let threshold = max(2, normalizedQuery.count / 3)
+    return bestDistance <= threshold ? match : nil
+}
+
+private func normalizeMatchString(_ string: String) -> String {
+    let allowed = CharacterSet.alphanumerics
+    return string
+        .lowercased()
+        .unicodeScalars
+        .filter { allowed.contains($0) }
+        .map(String.init)
+        .joined()
+}
+
+private func levenshteinDistance(_ lhs: String, _ rhs: String) -> Int {
+    let left = Array(lhs)
+    let right = Array(rhs)
+
+    if left.isEmpty { return right.count }
+    if right.isEmpty { return left.count }
+
+    var distances = Array(0...right.count)
+
+    for (i, leftChar) in left.enumerated() {
+        var previous = distances[0]
+        distances[0] = i + 1
+
+        for (j, rightChar) in right.enumerated() {
+            let current = distances[j + 1]
+            if leftChar == rightChar {
+                distances[j + 1] = previous
+            } else {
+                distances[j + 1] = min(previous, distances[j], current) + 1
+            }
+            previous = current
+        }
+    }
+
+    return distances[right.count]
 }

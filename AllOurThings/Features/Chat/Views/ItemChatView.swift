@@ -10,6 +10,7 @@ import SwiftData
 import Foundation
 import FoundationModels
 import OSLog
+import UIKit
 
 private let logger = Logger(subsystem: "com.allourhings.chat", category: "ItemChatView")
 
@@ -201,9 +202,8 @@ struct ItemChatView: View {
         \(featuresContext)
 
         You have access to tools to retrieve information from this item's manual:
-        1. list_manual_sections - Lists available sections in the manual
-        2. get_manual_section - Retrieves full content of a specific section
-        3. search_manual_sections - Searches across all manual sections
+        1. search_item_manual_sections - Search ONLY this item's manual sections (use this first)
+        2. get_manual_section - Retrieves content for a specific section (keep excerpts short)
 
         CRITICAL CITATION RULES:
         - ALWAYS include page citations when referencing manual information
@@ -221,11 +221,10 @@ struct ItemChatView: View {
         Be concise and helpful. Focus specifically on information about \(item.name).
         """
 
-        // Create tools (only manual-related tools, no search_items needed)
+        // Create tools (only manual-related tools, item-scoped search preferred)
         let tools: [any Tool] = [
-            ListManualSectionsTool(modelContext: modelContext),
-            GetManualSectionTool(modelContext: modelContext),
-            SearchManualSectionsTool(modelContext: modelContext)
+            SearchItemManualSectionsTool(modelContext: modelContext, itemId: item.id, itemName: item.name),
+            GetManualSectionTool(modelContext: modelContext)
         ]
 
         logger.info("🤖 [ItemChatView] Created \(tools.count) tools for session")

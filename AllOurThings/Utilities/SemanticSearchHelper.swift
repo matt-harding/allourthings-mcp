@@ -34,7 +34,8 @@ class SemanticSearchHelper {
 
         for section in sections {
             // Create searchable text for section
-            let sectionText = "\(section.heading) \(section.content.prefix(500))"
+            let summaryText = section.summary.isEmpty ? "" : " \(section.summary)"
+            let sectionText = "\(section.heading)\(summaryText) \(section.content.prefix(500))"
 
             guard let sectionVector = embedding.vector(for: sectionText) else {
                 continue

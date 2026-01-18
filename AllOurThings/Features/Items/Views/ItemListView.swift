@@ -26,52 +26,91 @@ struct ItemListView: View {
     var body: some View {
         NavigationSplitView {
             VStack(spacing: 0) {
-                ScrollView {
-                    LazyVStack(spacing: Theme.Spacing.medium, pinnedViews: []) {
-                        ForEach(groupedItems, id: \.name) { group in
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                                // Simple Section Header
-                                Text(group.name)
-                                    .font(Theme.Fonts.cosyHeadline())
-                                    .foregroundColor(Theme.Colors.cocoaBrown)
-                                    .padding(.horizontal, Theme.Spacing.small)
-                                    .padding(.vertical, Theme.Spacing.xs)
+                if items.isEmpty {
+                    VStack(spacing: Theme.Spacing.large) {
+                        Spacer()
 
-                                // Grid for this group's items
-                                LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
-                                    ForEach(group.items) { item in
-                                        NavigationLink {
-                                            ItemDetailView(item: item)
-                                        } label: {
-                                            ItemRowView(item: item)
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                        .contextMenu {
-                                            Button(role: .destructive, action: {
-                                                deleteItem(item)
-                                            }) {
-                                                Label("Delete", systemImage: "trash")
+                        VStack(spacing: Theme.Spacing.small) {
+                            Image(systemName: "cube.box.fill")
+                                .font(.system(size: 64))
+                                .foregroundColor(Theme.Colors.softLavender)
+                            Text("No items yet")
+                                .font(Theme.Fonts.cosyHeadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                            Text("Add your first item to get started")
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.softGray)
+                        }
+
+                        Button(action: { showingAddSheet = true }) {
+                            Label("Add Item", systemImage: "plus.circle.fill")
+                                .font(Theme.Fonts.cosyTitle())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, Theme.Spacing.xl)
+                                .padding(.vertical, Theme.Spacing.medium)
+                                .background(Theme.Colors.blushPink)
+                                .cornerRadius(Theme.CornerRadius.xl)
+                                .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                                        .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                )
+                        }
+                        .cosyButtonPress()
+
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: Theme.Spacing.medium, pinnedViews: []) {
+                            ForEach(groupedItems, id: \.name) { group in
+                                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                    // Simple Section Header
+                                    Text(group.name)
+                                        .font(Theme.Fonts.cosyHeadline())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                        .padding(.horizontal, Theme.Spacing.small)
+                                        .padding(.vertical, Theme.Spacing.xs)
+
+                                    // Grid for this group's items
+                                    LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
+                                        ForEach(group.items) { item in
+                                            NavigationLink {
+                                                ItemDetailView(item: item)
+                                            } label: {
+                                                ItemRowView(item: item)
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                            .contextMenu {
+                                                Button(role: .destructive, action: {
+                                                    deleteItem(item)
+                                                }) {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
                                             }
                                         }
                                     }
+                                    .padding(.horizontal, Theme.Spacing.xs)
                                 }
-                                .padding(.horizontal, Theme.Spacing.xs)
                             }
                         }
+                        .padding(.vertical, Theme.Spacing.xs)
                     }
-                    .padding(.vertical, Theme.Spacing.xs)
                 }
             }
             .background(Theme.Colors.skyBlue)
             .navigationTitle("AllOurThings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddSheet = true }) {
-                        Label("Add Item", systemImage: "plus.circle.fill")
+                if !items.isEmpty {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: { showingAddSheet = true }) {
+                            Label("Add Item", systemImage: "plus.circle.fill")
+                        }
+                        .tint(Theme.Colors.blushPink)
+                        .cosyButtonPress()
                     }
-                    .tint(Theme.Colors.blushPink)
-                    .cosyButtonPress()
                 }
             }
             .sheet(isPresented: $showingAddSheet) {
@@ -198,8 +237,8 @@ struct ItemDetailView: View {
     let item: Item
     @Environment(\.modelContext) private var modelContext
     @State private var showingEditSheet = false
-    @State private var showingFeatureEditor = false
     @State private var manualSectionCount: Int = 0
+    @State private var pdfToShow: PDFViewerData?
 
     var body: some View {
         ScrollView {
@@ -217,10 +256,67 @@ struct ItemDetailView: View {
                     }
                 }
 
-                // Image Section
+                // Basic Information Section
+                if !item.category.isEmpty ||
+                    !item.manufacturer.isEmpty ||
+                    !item.modelNumber.isEmpty ||
+                    !item.location.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Basic Information")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
+
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            if !item.category.isEmpty {
+                                DetailRowValue(title: "Category", value: item.category)
+                            }
+                            if !item.manufacturer.isEmpty {
+                                DetailRowValue(title: "Manufacturer", value: item.manufacturer)
+                            }
+                            if !item.modelNumber.isEmpty {
+                                DetailRowValue(title: "Model Number", value: item.modelNumber)
+                            }
+                            if !item.location.isEmpty {
+                                DetailRowValue(title: "Location", value: item.location)
+                            }
+                        }
+                    }
+                    .cosyCard(padding: Theme.Spacing.medium)
+                }
+
+                // Dates Section
+                if item.purchaseDate != nil || item.warrantyExpirationDate != nil {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Dates")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
+
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            if let purchaseDate = item.purchaseDate {
+                                DetailRowValue(
+                                    title: "Purchase Date",
+                                    value: purchaseDate.formatted(date: .abbreviated, time: .omitted)
+                                )
+                            }
+                            if let warrantyDate = item.warrantyExpirationDate {
+                                DetailRowValue(
+                                    title: "Warranty Expires",
+                                    value: warrantyDate.formatted(date: .abbreviated, time: .omitted)
+                                )
+                            }
+                        }
+                    }
+                    .cosyCard(padding: Theme.Spacing.medium)
+                }
+
+                // Photo Section
                 if let imageData = item.imageData,
                    let uiImage = UIImage(data: imageData) {
-                    VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                        Text("Photo")
+                            .font(Theme.Fonts.cosyHeadline())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
+
                         Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFit()
@@ -232,29 +328,7 @@ struct ItemDetailView: View {
                                     .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
                             )
                     }
-                    .padding(Theme.Spacing.medium)
-                    .background(Theme.Colors.cloudWhite)
-                    .cornerRadius(Theme.CornerRadius.xl)
-                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                            .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
-                    )
-                }
-
-                // Details Section
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    DetailRow(title: "Manufacturer", value: item.manufacturer)
-                    DetailRow(title: "Model Number", value: item.modelNumber)
-                    DetailRow(title: "Location", value: item.location)
-
-                    if let purchaseDate = item.purchaseDate {
-                        DetailRow(title: "Purchase Date", value: purchaseDate.formatted(date: .abbreviated, time: .omitted))
-                    }
-
-                    if let warrantyDate = item.warrantyExpirationDate {
-                        DetailRow(title: "Warranty Expires", value: warrantyDate.formatted(date: .abbreviated, time: .omitted))
-                    }
+                    .cosyCard(padding: Theme.Spacing.medium)
                 }
 
                 // Notes Section
@@ -267,6 +341,7 @@ struct ItemDetailView: View {
                                 .font(Theme.Fonts.cosyHeadline())
                                 .foregroundColor(Theme.Colors.cocoaBrown)
                         }
+
                         Text(item.notes)
                             .font(Theme.Fonts.cosyBody())
                             .foregroundColor(Theme.Colors.cocoaBrown)
@@ -290,15 +365,8 @@ struct ItemDetailView: View {
                             Text("Key Features")
                                 .font(Theme.Fonts.cosyHeadline())
                                 .foregroundColor(Theme.Colors.cocoaBrown)
-                            Spacer()
-                            Button(action: { showingFeatureEditor = true }) {
-                                Text("Edit")
-                                    .font(Theme.Fonts.cosyCaption())
-                                    .foregroundColor(Theme.Colors.blushPink)
-                            }
                         }
 
-                        // Capabilities
                         let capabilities = item.features.filter { $0.type == .capability }
                         if !capabilities.isEmpty {
                             Text("Capabilities")
@@ -318,7 +386,6 @@ struct ItemDetailView: View {
                             }
                         }
 
-                        // Specifications
                         let specifications = item.features.filter { $0.type == .specification }
                         if !specifications.isEmpty {
                             Text("Specifications")
@@ -345,6 +412,58 @@ struct ItemDetailView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
                             .stroke(Theme.Colors.mintGreen, lineWidth: Theme.BorderWidth.thick)
+                    )
+                }
+
+                // Manual Section
+                if let manualPath = item.manualFilePath, !manualPath.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Image(systemName: "doc.text.fill")
+                                .foregroundColor(Theme.Colors.blushPink)
+                            Text("Manual")
+                                .font(Theme.Fonts.cosyHeadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                            Spacer()
+                            Text("\(manualSectionCount) sections")
+                                .font(Theme.Fonts.cosyCaption())
+                                .foregroundColor(Theme.Colors.softGray)
+                        }
+
+                        if let manualName = item.manualFileName, !manualName.isEmpty {
+                            Text(manualName)
+                                .font(Theme.Fonts.cosyBody())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .lineLimit(2)
+                        }
+
+                        Button(action: {
+                            pdfToShow = PDFViewerData(
+                                pdfPath: manualPath,
+                                pageNumber: 1,
+                                itemName: item.name
+                            )
+                        }) {
+                            HStack(spacing: Theme.Spacing.xs) {
+                                Image(systemName: "book.fill")
+                                Text("Open Manual")
+                            }
+                            .font(Theme.Fonts.cosyBody())
+                            .foregroundColor(Theme.Colors.cocoaBrown)
+                            .padding(.horizontal, Theme.Spacing.small)
+                            .padding(.vertical, Theme.Spacing.xs)
+                            .background(Theme.Colors.warmCream)
+                            .cornerRadius(Theme.CornerRadius.medium)
+                        }
+                        .cosyButtonPress()
+                    }
+                    .padding(Theme.Spacing.medium)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.Colors.peach.opacity(0.15))
+                    .cornerRadius(Theme.CornerRadius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                            .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
                     )
                 }
 
@@ -397,22 +516,22 @@ struct ItemDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showingEditSheet = true }) {
-                    Text("Edit")
-                        .font(Theme.Fonts.cosyButton())
-                        .foregroundColor(.white)
-                        .padding(.horizontal, Theme.Spacing.small)
-                        .padding(.vertical, Theme.Spacing.xs)
-                        .background(Theme.Colors.blushPink)
-                        .cornerRadius(Theme.CornerRadius.xl)
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 24))
                 }
+                .tint(Theme.Colors.blushPink)
                 .cosyButtonPress()
             }
         }
         .sheet(isPresented: $showingEditSheet) {
             AddEditItemView(item: item)
         }
-        .sheet(isPresented: $showingFeatureEditor) {
-            FeatureEditorView(item: item)
+        .sheet(item: $pdfToShow) { pdfData in
+            PDFViewerView(
+                pdfPath: pdfData.pdfPath,
+                pageNumber: pdfData.pageNumber,
+                itemName: pdfData.itemName
+            )
         }
         .task {
             await checkManualSections()
@@ -433,25 +552,23 @@ struct ItemDetailView: View {
     }
 }
 
-struct DetailRow: View {
+struct DetailRowValue: View {
     let title: String
     let value: String
 
     var body: some View {
-        if !value.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title)
-                    .font(Theme.Fonts.cosyCaption())
-                    .foregroundColor(Theme.Colors.mutedPlum)
-                    .textCase(.uppercase)
-                Text(value)
-                    .font(Theme.Fonts.cosyBody())
-                    .foregroundColor(Theme.Colors.cocoaBrown)
-            }
-            .padding(Theme.Spacing.small)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.Colors.warmCream.opacity(0.5))
-            .cornerRadius(Theme.CornerRadius.small)
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+            Text(title)
+                .font(Theme.Fonts.cosyCaption())
+                .foregroundColor(Theme.Colors.mutedPlum)
+                .textCase(.uppercase)
+            Text(value.isEmpty ? "Not set" : value)
+                .font(Theme.Fonts.cosyBody())
+                .foregroundColor(value.isEmpty ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
         }
+        .padding(Theme.Spacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Colors.warmCream.opacity(0.5))
+        .cornerRadius(Theme.CornerRadius.small)
     }
 }
