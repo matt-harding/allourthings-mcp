@@ -105,18 +105,22 @@ class PDFTextExtractor {
 
             // Check if line is a heading
             if isHeading(line: trimmed) {
-                // Save previous section if exists
-                if let section = currentSection {
+                // Save previous section if exists AND it has content
+                if var section = currentSection {
+                    // Add any accumulated page numbers to the previous section
+                    section.pageNumbers.append(contentsOf: currentPageNumbers)
+                    // Remove duplicates and sort
+                    section.pageNumbers = Array(Set(section.pageNumbers)).sorted()
                     sections.append(section)
                 }
 
-                // Start new section
+                // Start new section (page numbers will be collected as we go)
                 currentSection = SectionData(
                     heading: trimmed,
                     content: "",
-                    pageNumbers: Array(currentPageNumbers)
+                    pageNumbers: []
                 )
-                currentPageNumbers.removeAll()
+                // Keep the current page numbers for this new section
             } else if !trimmed.isEmpty {
                 // Add content to current section
                 if currentSection == nil {
@@ -124,15 +128,19 @@ class PDFTextExtractor {
                     currentSection = SectionData(
                         heading: "Introduction",
                         content: "",
-                        pageNumbers: Array(currentPageNumbers)
+                        pageNumbers: Array(currentPageNumbers).sorted()
                     )
+                    currentPageNumbers.removeAll()
                 }
                 currentSection?.content += trimmed + "\n"
             }
         }
 
-        // Add final section
-        if let section = currentSection {
+        // Add final section with remaining page numbers
+        if var section = currentSection {
+            section.pageNumbers.append(contentsOf: currentPageNumbers)
+            // Remove duplicates and sort
+            section.pageNumbers = Array(Set(section.pageNumbers)).sorted()
             sections.append(section)
         }
 
@@ -143,6 +151,11 @@ class PDFTextExtractor {
                 content: text,
                 pageNumbers: []
             ))
+        }
+
+        print("📑 Extracted \(sections.count) sections")
+        for (index, section) in sections.enumerated() {
+            print("   Section \(index + 1): \(section.heading) - \(section.content.count) chars, pages: \(section.pageNumbers)")
         }
 
         return sections

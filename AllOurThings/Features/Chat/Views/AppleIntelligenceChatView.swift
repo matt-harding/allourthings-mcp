@@ -283,10 +283,18 @@ struct AppleIntelligenceChatView: View {
         3. Use get_manual_section to retrieve specific section content
         4. Alternatively, use search_manual_sections to find relevant information across all manuals
 
-        When answering questions using information from manuals:
-        - Always cite page numbers using format: (page X) or (pages X-Y)
-        - Place citations immediately after relevant information
-        - Example: "Clean with soft cloth (page 12)"
+        CRITICAL CITATION RULES:
+        - ALWAYS include page citations when referencing manual information
+        - Use the exact format: (page X) or (pages X-Y) where X and Y are page numbers
+        - Place citations immediately after the relevant information
+        - Include citations even if the content is brief or just a heading
+        - Examples:
+          * "Clean with soft cloth (page 12)"
+          * "Temperature should be 375°F (page 8)"
+          * "For maintenance instructions, see the Care and Maintenance section (page 27)"
+
+        If a tool returns page information, YOU MUST cite those pages in your response.
+        Do not just reference sections without page numbers - always include the page numbers provided by the tools.
 
         Be concise and helpful. Use the tools systematically to find accurate information.
         """

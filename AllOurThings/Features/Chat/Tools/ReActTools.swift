@@ -219,12 +219,27 @@ struct GetManualSectionTool: Tool {
         logger.info("📖 [GetManualSectionTool] Found section: '\(section.heading)' with \(section.content.count) characters")
         logger.info("📖 [GetManualSectionTool] Page numbers: \(section.pageNumbers)")
 
-        let response = """
-        Section: \(section.heading)
-        \(section.pageRange)
+        // Format response to make page numbers very clear for citation
+        let pageInfo = section.pageNumbers.isEmpty ? "Page information not available" : section.pageRange
+        let response: String
 
-        \(section.content)
-        """
+        if section.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // If content is empty, still return page information
+            response = """
+            Section: \(section.heading)
+            \(pageInfo)
+
+            [This section heading appears in the manual but detailed content was not extracted. Please refer to the manual at the pages listed above.]
+            """
+        } else {
+            response = """
+            Section: \(section.heading)
+            \(pageInfo)
+
+            \(section.content)
+            """
+        }
+
         logger.info("✅ [GetManualSectionTool] Returning section content")
         return response
     }
