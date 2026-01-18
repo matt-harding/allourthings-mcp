@@ -77,44 +77,6 @@ final class Item {
 
     // MARK: - Computed Properties
 
-    var contextDescription: String {
-        var itemInfo = "- \(name)"
-
-        if !category.isEmpty {
-            itemInfo += " (Category: \(category))"
-        }
-        if !manufacturer.isEmpty {
-            itemInfo += " by \(manufacturer)"
-        }
-        if !location.isEmpty {
-            itemInfo += " located in \(location)"
-        }
-        if let warrantyDate = warrantyExpirationDate {
-            itemInfo += " (Warranty expires: \(warrantyDate.formatted(date: .abbreviated, time: .omitted)))"
-        }
-        if !notes.isEmpty {
-            itemInfo += " (Notes: \(notes))"
-        }
-        if let manualText = manualText, !manualText.isEmpty {
-            itemInfo += "\n  Manual documentation:\n\(manualText)"
-        }
-
-        // Include extracted features
-        if !features.isEmpty {
-            let capabilities = features.filter { $0.type == .capability }.map { $0.text }
-            let specifications = features.filter { $0.type == .specification }.map { $0.text }
-
-            if !capabilities.isEmpty {
-                itemInfo += "\n  Capabilities: " + capabilities.joined(separator: ", ")
-            }
-            if !specifications.isEmpty {
-                itemInfo += "\n  Specifications: " + specifications.joined(separator: ", ")
-            }
-        }
-
-        return itemInfo
-    }
-
     var features: [ItemFeature] {
         get {
             guard let data = extractedFeatures else { return [] }

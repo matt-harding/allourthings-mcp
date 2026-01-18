@@ -148,22 +148,6 @@ extension View {
             )
     }
 
-    // Category Badge Modifier (Pixel Art Style)
-    func categoryBadge(category: String) -> some View {
-        let categoryColor = Theme.Colors.categoryColor(for: category)
-        return self
-            .font(Theme.Fonts.cosyCaption())
-            .foregroundColor(Theme.Colors.cocoaBrown)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(categoryColor.opacity(0.3))
-            .cornerRadius(Theme.CornerRadius.medium)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                    .stroke(categoryColor, lineWidth: Theme.BorderWidth.standard)
-            )
-    }
-
     // Gradient Background Helper
     func cosyGradientBackground(topColor: Color = Theme.Colors.skyBlue, bottomColor: Color = Theme.Colors.warmCream) -> some View {
         self.background(
@@ -176,14 +160,6 @@ extension View {
         )
     }
 
-    // Shadow Modifiers (Pixel Art Style)
-    func standardShadow() -> some View {
-        self.shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 2, y: 2)
-    }
-
-    func softShadow() -> some View {
-        self.shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-    }
 }
 
 // MARK: - Cozy TextField Component (Pixel Art Style)

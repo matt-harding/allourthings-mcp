@@ -14,47 +14,6 @@ class SemanticSearchHelper {
         case failedToGenerateEmbedding
     }
 
-    // MARK: - Search Items
-
-    func searchItems(
-        query: String,
-        in items: [Item],
-        maxResults: Int = 5,
-        minSimilarity: Double = 0.1
-    ) throws -> [ScoredItem] {
-        guard let embedding = embedding else {
-            throw SearchError.embeddingNotAvailable
-        }
-
-        guard let queryVector = embedding.vector(for: query) else {
-            throw SearchError.failedToGenerateEmbedding
-        }
-
-        var scoredItems: [ScoredItem] = []
-
-        for item in items {
-            // Create searchable text for item
-            let itemText = buildSearchText(for: item)
-
-            guard let itemVector = embedding.vector(for: itemText) else {
-                continue
-            }
-
-            // Calculate similarity
-            let similarity = cosineSimilarity(queryVector, itemVector)
-
-            if similarity >= minSimilarity {
-                scoredItems.append(ScoredItem(item: item, score: similarity))
-            }
-        }
-
-        // Sort by similarity and take top results
-        return scoredItems
-            .sorted { $0.score > $1.score }
-            .prefix(maxResults)
-            .map { $0 }
-    }
-
     // MARK: - Search Sections
 
     func searchSections(
@@ -96,18 +55,6 @@ class SemanticSearchHelper {
             .map { $0 }
     }
 
-    // MARK: - Helper: Build Search Text for Item
-
-    private func buildSearchText(for item: Item) -> String {
-        var parts: [String] = [item.name, item.category, item.manufacturer]
-
-        if !item.notes.isEmpty {
-            parts.append(item.notes)
-        }
-
-        return parts.joined(separator: " ")
-    }
-
     // MARK: - Helper: Cosine Similarity
 
     private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {
@@ -124,15 +71,6 @@ class SemanticSearchHelper {
 }
 
 // MARK: - Scored Results
-
-struct ScoredItem {
-    let item: Item
-    let score: Double
-
-    var percentageScore: Double {
-        score * 100
-    }
-}
 
 struct ScoredSection {
     let section: ManualSection

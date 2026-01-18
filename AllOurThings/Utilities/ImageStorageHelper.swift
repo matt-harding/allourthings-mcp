@@ -86,13 +86,4 @@ class ImageStorageHelper {
         }
     }
 
-    // MARK: - Load Image Data
-
-    func loadImageData(for relativePath: String) -> Data? {
-        guard let imageURL = getImageURL(for: relativePath) else {
-            return nil
-        }
-
-        return try? Data(contentsOf: imageURL)
-    }
 }
