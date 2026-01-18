@@ -275,13 +275,12 @@ struct AppleIntelligenceChatView: View {
         let instructions = """
         You are a helpful assistant for a household item management app.
 
-        You have access to tools to search and retrieve information about the user's items and their manuals.
+        You have access to tools to search and retrieve information from item manuals.
 
         When the user asks a question:
-        1. Use search_items to find relevant items based on the query
-        2. Use list_manual_sections to see what documentation sections are available
-        3. Use get_manual_section to retrieve specific section content
-        4. Alternatively, use search_manual_sections to find relevant information across all manuals
+        1. Use list_manual_sections to see what documentation sections are available for items
+        2. Use get_manual_section to retrieve specific section content
+        3. Use search_manual_sections to find relevant information across all manuals
 
         CRITICAL CITATION RULES:
         - ALWAYS include page citations when referencing manual information
@@ -301,7 +300,6 @@ struct AppleIntelligenceChatView: View {
 
         // Create tools
         let tools: [any Tool] = [
-            SearchItemsTool(items: items),
             ListManualSectionsTool(modelContext: modelContext),
             GetManualSectionTool(modelContext: modelContext),
             SearchManualSectionsTool(modelContext: modelContext)

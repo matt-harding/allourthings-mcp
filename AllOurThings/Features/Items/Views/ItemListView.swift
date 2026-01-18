@@ -234,7 +234,9 @@ struct ItemRowView: View {
 
 struct ItemDetailView: View {
     let item: Item
+    @Environment(\.modelContext) private var modelContext
     @State private var showingEditSheet = false
+    @State private var manualSectionCount: Int = 0
 
     var body: some View {
         ScrollView {
@@ -316,6 +318,36 @@ struct ItemDetailView: View {
                     )
                 }
 
+                // Manual & Chat Section
+                if manualSectionCount > 0 {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Image(systemName: "book.fill")
+                                .foregroundColor(Theme.Colors.blushPink)
+                            Text("Ask Questions")
+                                .font(Theme.Fonts.cosyHeadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                            Spacer()
+                            Text("\(manualSectionCount) sections")
+                                .font(Theme.Fonts.cosyCaption())
+                                .foregroundColor(Theme.Colors.softGray)
+                        }
+                        .padding(.horizontal, Theme.Spacing.medium)
+                        .padding(.top, Theme.Spacing.medium)
+
+                        // Embedded chat
+                        ItemChatView(item: item)
+                            .frame(height: 400)
+                    }
+                    .background(Theme.Colors.cloudWhite)
+                    .cornerRadius(Theme.CornerRadius.xl)
+                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                            .stroke(Theme.Colors.blushPink, lineWidth: Theme.BorderWidth.thick)
+                    )
+                }
+
                 Spacer()
             }
             .padding(Theme.Spacing.large)
@@ -348,6 +380,22 @@ struct ItemDetailView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             AddEditItemView(item: item)
+        }
+        .task {
+            await checkManualSections()
+        }
+    }
+
+    private func checkManualSections() async {
+        let itemId = item.id
+        var descriptor = FetchDescriptor<ManualSection>()
+        descriptor.predicate = #Predicate { section in
+            section.itemId == itemId
+        }
+
+        let count = (try? modelContext.fetchCount(descriptor)) ?? 0
+        await MainActor.run {
+            manualSectionCount = count
         }
     }
 }

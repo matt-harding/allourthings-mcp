@@ -34,20 +34,7 @@ struct ContentView: View {
     }
 
     private var mainTabView: some View {
-        TabView {
-            ItemListView()
-                .tabItem {
-                    Image(systemName: "book.fill")
-                    Text("Items")
-                }
-
-            AppleIntelligenceChatView()
-                .tabItem {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                    Text("Chat")
-                }
-        }
-        .tint(Theme.Colors.blushPink)
+        ItemListView()
     }
 }
 
