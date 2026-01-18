@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 import PhotosUI
+import FoundationModels
 
 struct AddEditItemView: View {
     @Environment(\.modelContext) private var modelContext
@@ -27,6 +28,8 @@ struct AddEditItemView: View {
     @State private var pdfStats: ExtractionStats?
     @State private var pdfError: String?
     @State private var temporarySections: [SectionData] = []
+    @State private var isExtractingFeatures = false
+    @State private var temporaryFeatures: [ItemFeature] = []
 
     // Image fields
     @State private var imageData: Data?
@@ -65,6 +68,7 @@ struct AddEditItemView: View {
             _imageData = State(initialValue: item.imageData)
             _imageFileName = State(initialValue: item.imageFileName)
             _imageFilePath = State(initialValue: item.imageFilePath)
+            _temporaryFeatures = State(initialValue: item.features)
         }
     }
 
@@ -236,6 +240,24 @@ struct AddEditItemView: View {
                                     Text(stats.summary)
                                         .font(Theme.Fonts.cosyCaption())
                                         .foregroundColor(Theme.Colors.softGray)
+                                        .padding(.horizontal, Theme.Spacing.small)
+                                }
+
+                                // Feature extraction status
+                                if isExtractingFeatures {
+                                    HStack(spacing: Theme.Spacing.xs) {
+                                        ProgressView()
+                                            .tint(Theme.Colors.cocoaBrown)
+                                            .scaleEffect(0.8)
+                                        Text("Extracting features...")
+                                            .font(Theme.Fonts.cosyCaption())
+                                            .foregroundColor(Theme.Colors.cocoaBrown)
+                                    }
+                                    .padding(.horizontal, Theme.Spacing.small)
+                                } else if !temporaryFeatures.isEmpty {
+                                    Text("\(temporaryFeatures.count) features extracted")
+                                        .font(Theme.Fonts.cosyCaption())
+                                        .foregroundColor(Theme.Colors.mintGreen)
                                         .padding(.horizontal, Theme.Spacing.small)
                                 }
                             }
@@ -472,6 +494,17 @@ struct AddEditItemView: View {
             // Extract sections from the text
             let sections = PDFTextExtractor.shared.extractSections(from: result.text)
 
+            // Extract features using Apple Intelligence
+            await MainActor.run {
+                isExtractingFeatures = true
+            }
+
+            let model = SystemLanguageModel()
+            let features = await FeatureExtractor.shared.extractFeatures(
+                from: result.text,
+                model: model
+            )
+
             await MainActor.run {
                 // Delete old PDF and sections if replacing
                 if let oldPath = manualFilePath {
@@ -488,6 +521,10 @@ struct AddEditItemView: View {
 
                 // Store sections temporarily (will be saved to database on item save)
                 temporarySections = sections
+
+                // Store features temporarily (will be saved to database on item save)
+                temporaryFeatures = features
+                isExtractingFeatures = false
             }
         }
     }
@@ -503,6 +540,8 @@ struct AddEditItemView: View {
         manualFilePath = nil
         pdfStats = nil
         pdfError = nil
+        temporarySections = []
+        temporaryFeatures = []
     }
 
     // MARK: - Photo Handling
@@ -613,6 +652,12 @@ struct AddEditItemView: View {
             item.imageData = imageData
             item.imageFileName = imageFileName
             item.imageFilePath = imageFilePath
+
+            // Only update features if new manual was uploaded
+            if !temporarySections.isEmpty {
+                item.features = temporaryFeatures
+            }
+
             savedItem = item
 
             // Delete old sections if manual was replaced
@@ -639,6 +684,9 @@ struct AddEditItemView: View {
             )
             modelContext.insert(newItem)
             savedItem = newItem
+
+            // Save features for new item
+            newItem.features = temporaryFeatures
         }
 
         // Save sections to database if any

@@ -198,6 +198,7 @@ struct ItemDetailView: View {
     let item: Item
     @Environment(\.modelContext) private var modelContext
     @State private var showingEditSheet = false
+    @State private var showingFeatureEditor = false
     @State private var manualSectionCount: Int = 0
 
     var body: some View {
@@ -280,6 +281,73 @@ struct ItemDetailView: View {
                     )
                 }
 
+                // Features Section
+                if !item.features.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(Theme.Colors.mintGreen)
+                            Text("Key Features")
+                                .font(Theme.Fonts.cosyHeadline())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                            Spacer()
+                            Button(action: { showingFeatureEditor = true }) {
+                                Text("Edit")
+                                    .font(Theme.Fonts.cosyCaption())
+                                    .foregroundColor(Theme.Colors.blushPink)
+                            }
+                        }
+
+                        // Capabilities
+                        let capabilities = item.features.filter { $0.type == .capability }
+                        if !capabilities.isEmpty {
+                            Text("Capabilities")
+                                .font(Theme.Fonts.cosySubheadline())
+                                .foregroundColor(Theme.Colors.mutedPlum)
+                                .textCase(.uppercase)
+                                .padding(.top, Theme.Spacing.xs)
+
+                            ForEach(capabilities) { feature in
+                                HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+                                    Text("•")
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                    Text(feature.text)
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                }
+                            }
+                        }
+
+                        // Specifications
+                        let specifications = item.features.filter { $0.type == .specification }
+                        if !specifications.isEmpty {
+                            Text("Specifications")
+                                .font(Theme.Fonts.cosySubheadline())
+                                .foregroundColor(Theme.Colors.mutedPlum)
+                                .textCase(.uppercase)
+                                .padding(.top, Theme.Spacing.small)
+
+                            ForEach(specifications) { feature in
+                                HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+                                    Text("•")
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                    Text(feature.text)
+                                        .font(Theme.Fonts.cosyBody())
+                                        .foregroundColor(Theme.Colors.cocoaBrown)
+                                }
+                            }
+                        }
+                    }
+                    .padding(Theme.Spacing.medium)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.Colors.mintGreen.opacity(0.1))
+                    .cornerRadius(Theme.CornerRadius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                            .stroke(Theme.Colors.mintGreen, lineWidth: Theme.BorderWidth.thick)
+                    )
+                }
+
                 // Manual & Chat Section
                 if manualSectionCount > 0 {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -342,6 +410,9 @@ struct ItemDetailView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             AddEditItemView(item: item)
+        }
+        .sheet(isPresented: $showingFeatureEditor) {
+            FeatureEditorView(item: item)
         }
         .task {
             await checkManualSections()

@@ -162,8 +162,43 @@ struct ItemChatView: View {
             return
         }
 
+        // Build features context if available
+        let featuresContext: String = {
+            let features = item.features
+            guard !features.isEmpty else { return "" }
+
+            let capabilities = features
+                .filter { $0.type == .capability }
+                .map { "• \($0.text)" }
+                .joined(separator: "\n")
+
+            let specifications = features
+                .filter { $0.type == .specification }
+                .map { "• \($0.text)" }
+                .joined(separator: "\n")
+
+            var context = "\n\nKEY FEATURES OF \(item.name.uppercased()):\n"
+
+            if !capabilities.isEmpty {
+                context += "\nCapabilities:\n\(capabilities)\n"
+            }
+
+            if !specifications.isEmpty {
+                context += "\nSpecifications:\n\(specifications)\n"
+            }
+
+            context += """
+
+            These features are extracted from the manual. Reference them when relevant, but always \
+            verify detailed usage instructions using the manual tools.
+            """
+
+            return context
+        }()
+
         let instructions = """
         You are a helpful assistant for answering questions about a specific household item: \(item.name).
+        \(featuresContext)
 
         You have access to tools to retrieve information from this item's manual:
         1. list_manual_sections - Lists available sections in the manual
