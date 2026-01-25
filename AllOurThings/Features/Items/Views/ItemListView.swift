@@ -239,7 +239,7 @@ struct ItemDetailView: View {
     @State private var showingEditSheet = false
     @State private var manualSectionCount: Int = 0
     @State private var manualSections: [ManualSection] = []
-    @State private var sectionsByTopic: [ManualTopic: [ManualSection]] = [:]
+    @State private var topicBulletsByTopic: [ManualTopic: [ManualTopicBullet]] = [:]
     @State private var pdfToShow: PDFViewerData?
 
     var body: some View {
@@ -303,10 +303,15 @@ struct ItemDetailView: View {
         }
 
         let sections = (try? modelContext.fetch(descriptor)) ?? []
+        var bulletsDescriptor = FetchDescriptor<ManualTopicBullet>()
+        bulletsDescriptor.predicate = #Predicate { bullet in
+            bullet.itemId == itemId
+        }
+        let bullets = (try? modelContext.fetch(bulletsDescriptor)) ?? []
         await MainActor.run {
             manualSections = sections
             manualSectionCount = sections.count
-            sectionsByTopic = ManualTopicTagger.shared.tagSections(sections)
+            topicBulletsByTopic = groupTopicBullets(bullets)
         }
     }
 
@@ -317,6 +322,18 @@ struct ItemDetailView: View {
             pageNumber: pageNumber,
             itemName: item.name
         )
+    }
+
+    private func groupTopicBullets(_ bullets: [ManualTopicBullet]) -> [ManualTopic: [ManualTopicBullet]] {
+        var grouped: [ManualTopic: [ManualTopicBullet]] = [:]
+        for bullet in bullets {
+            guard let topic = bullet.topic else { continue }
+            grouped[topic, default: []].append(bullet)
+        }
+        for topic in grouped.keys {
+            grouped[topic]?.sort { $0.bulletIndex < $1.bulletIndex }
+        }
+        return grouped
     }
 
     @ViewBuilder
@@ -500,7 +517,7 @@ struct ItemDetailView: View {
     private var manualTopicsSection: some View {
         if !manualSections.isEmpty {
             ManualTopicsSectionView(
-                sectionsByTopic: sectionsByTopic,
+                bulletsByTopic: topicBulletsByTopic,
                 openManual: openManual
             )
         }
@@ -539,7 +556,7 @@ struct ItemDetailView: View {
 }
 
 struct ManualTopicsSectionView: View {
-    let sectionsByTopic: [ManualTopic: [ManualSection]]
+    let bulletsByTopic: [ManualTopic: [ManualTopicBullet]]
     let openManual: (Int) -> Void
 
     var body: some View {
@@ -555,7 +572,7 @@ struct ManualTopicsSectionView: View {
             ForEach(ManualTopic.allCases, id: \.self) { topic in
                 ManualTopicCardView(
                     topic: topic,
-                    sections: sectionsByTopic[topic] ?? [],
+                    bullets: bulletsByTopic[topic] ?? [],
                     openManual: openManual
                 )
             }
@@ -573,7 +590,7 @@ struct ManualTopicsSectionView: View {
 
 struct ManualTopicCardView: View {
     let topic: ManualTopic
-    let sections: [ManualSection]
+    let bullets: [ManualTopicBullet]
     let openManual: (Int) -> Void
 
     var body: some View {
@@ -583,18 +600,18 @@ struct ManualTopicCardView: View {
                     .font(Theme.Fonts.cosySubheadline())
                     .foregroundColor(Theme.Colors.mutedPlum)
                 Spacer()
-                Text("\(sections.count) sections")
+                Text("\(bullets.count) bullets")
                     .font(Theme.Fonts.cosyCaption())
                     .foregroundColor(Theme.Colors.softGray)
             }
 
-            if sections.isEmpty {
-                Text("No manual content found for this topic.")
+            if bullets.isEmpty {
+                Text("No bullets available for this topic.")
                     .font(Theme.Fonts.cosyCaption())
                     .foregroundColor(Theme.Colors.softGray)
             } else {
-                ForEach(sections) { section in
-                    ManualSectionCardView(section: section, openManual: openManual)
+                ForEach(bullets) { bullet in
+                    ManualTopicBulletView(bullet: bullet, openManual: openManual)
                 }
             }
         }
@@ -608,44 +625,29 @@ struct ManualTopicCardView: View {
     }
 }
 
-struct ManualSectionCardView: View {
-    let section: ManualSection
+struct ManualTopicBulletView: View {
+    let bullet: ManualTopicBullet
     let openManual: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(section.displayHeading)
-                .font(Theme.Fonts.cosySubheadline())
+        HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+            Text("•")
                 .foregroundColor(Theme.Colors.cocoaBrown)
-
-            if section.pageNumbers.isEmpty {
-                Text("Page info unavailable")
-                    .font(Theme.Fonts.cosyCaption())
-                    .foregroundColor(Theme.Colors.softGray)
-            } else {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 80), spacing: Theme.Spacing.xs)],
-                    spacing: Theme.Spacing.xs
-                ) {
-                    ForEach(section.pageNumbers.sorted(), id: \.self) { page in
-                        Button(action: { openManual(page) }) {
-                            Text("Page \(page)")
-                                .font(Theme.Fonts.cosyCaption())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                                .padding(.horizontal, Theme.Spacing.xs)
-                                .padding(.vertical, Theme.Spacing.xxs)
-                                .background(Theme.Colors.warmCream)
-                                .cornerRadius(Theme.CornerRadius.small)
-                        }
-                        .cosyButtonPress()
-                    }
-                }
-            }
-
-            if !section.content.isEmpty {
-                Text(section.content)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(bullet.text)
                     .font(Theme.Fonts.cosyBody())
                     .foregroundColor(Theme.Colors.cocoaBrown)
+
+                Button(action: { openManual(bullet.pageNumber) }) {
+                    Text("Page \(bullet.pageNumber)")
+                        .font(Theme.Fonts.cosyCaption())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
+                        .padding(.horizontal, Theme.Spacing.xs)
+                        .padding(.vertical, Theme.Spacing.xxs)
+                        .background(Theme.Colors.warmCream)
+                        .cornerRadius(Theme.CornerRadius.small)
+                }
+                .cosyButtonPress()
             }
         }
         .padding(Theme.Spacing.small)

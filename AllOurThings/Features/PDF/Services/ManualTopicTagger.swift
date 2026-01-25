@@ -95,7 +95,43 @@ final class ManualTopicTagger {
         return results
     }
 
+    func tagSectionData(
+        _ sections: [SectionData],
+        similarityThreshold: Double = 0.22
+    ) -> [ManualTopic: [SectionData]] {
+        guard let embedding = embedding else { return [:] }
+
+        let sectionVectors = sections.compactMap { section -> (SectionData, [Double])? in
+            let text = sectionDataText(for: section)
+            guard let vector = embedding.vector(for: text) else { return nil }
+            return (section, vector)
+        }
+
+        var results: [ManualTopic: [SectionData]] = [:]
+
+        for topic in ManualTopic.allCases {
+            guard let topicVector = embedding.vector(for: topic.matchText) else { continue }
+
+            for (section, sectionVector) in sectionVectors {
+                let similarity = cosineSimilarity(topicVector, sectionVector)
+                if similarity >= similarityThreshold {
+                    results[topic, default: []].append(section)
+                }
+            }
+
+            results[topic]?.sort { $0.pageNumbers.first ?? 0 < $1.pageNumbers.first ?? 0 }
+        }
+
+        return results
+    }
+
     private func sectionText(for section: ManualSection) -> String {
+        let summaryText = section.summary.isEmpty ? "" : " \(section.summary)"
+        let contentPreview = String(section.content.prefix(800))
+        return "\(section.heading)\(summaryText) \(contentPreview)"
+    }
+
+    private func sectionDataText(for section: SectionData) -> String {
         let summaryText = section.summary.isEmpty ? "" : " \(section.summary)"
         let contentPreview = String(section.content.prefix(800))
         return "\(section.heading)\(summaryText) \(contentPreview)"

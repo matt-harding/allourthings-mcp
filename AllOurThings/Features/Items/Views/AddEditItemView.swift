@@ -28,6 +28,7 @@ struct AddEditItemView: View {
     @State private var pdfStats: ExtractionStats?
     @State private var pdfError: String?
     @State private var temporarySections: [SectionData] = []
+    @State private var temporaryTopicBullets: [ManualTopic: [TopicBulletDraft]] = [:]
     @State private var pdfProcessingStage: String?
 
     // Image fields
@@ -555,6 +556,19 @@ struct AddEditItemView: View {
             let sections = await SectionSummaryExtractor.shared.summarizeSections(extractedSections, model: model)
 
             await MainActor.run {
+                pdfProcessingStage = "Tagging topics"
+            }
+            let sectionsByTopic = ManualTopicTagger.shared.tagSectionData(sections)
+
+            await MainActor.run {
+                pdfProcessingStage = "Generating topic bullets"
+            }
+            let topicBullets = await TopicBulletExtractor.shared.generateBullets(
+                sectionsByTopic: sectionsByTopic,
+                model: model
+            )
+
+            await MainActor.run {
                 // Delete old PDF and sections if replacing
                 if let oldPath = manualFilePath {
                     PDFStorageHelper.shared.deletePDF(at: oldPath)
@@ -571,6 +585,7 @@ struct AddEditItemView: View {
 
                 // Store sections temporarily (will be saved to database on item save)
                 temporarySections = sections
+                temporaryTopicBullets = topicBullets
             }
         }
     }
@@ -587,6 +602,7 @@ struct AddEditItemView: View {
         pdfStats = nil
         pdfError = nil
         temporarySections = []
+        temporaryTopicBullets = [:]
     }
 
     // MARK: - Photo Handling
@@ -703,6 +719,7 @@ struct AddEditItemView: View {
             // Delete old sections if manual was replaced
             if !temporarySections.isEmpty {
                 deleteExistingSections(for: item.id)
+                deleteExistingTopicBullets(for: item.id)
             }
         } else {
             // Create new item
@@ -742,6 +759,22 @@ struct AddEditItemView: View {
             }
         }
 
+        if !temporaryTopicBullets.isEmpty {
+            for topic in ManualTopic.allCases {
+                let bullets = temporaryTopicBullets[topic] ?? []
+                for (index, bullet) in bullets.enumerated() {
+                    let stored = ManualTopicBullet(
+                        itemId: savedItem.id,
+                        topicRaw: topic.rawValue,
+                        text: bullet.text,
+                        pageNumber: bullet.pageNumber,
+                        bulletIndex: index
+                    )
+                    modelContext.insert(stored)
+                }
+            }
+        }
+
         do {
             try modelContext.save()
         } catch {
@@ -761,6 +794,20 @@ struct AddEditItemView: View {
         if let existingSections = try? modelContext.fetch(descriptor) {
             for section in existingSections {
                 modelContext.delete(section)
+            }
+        }
+    }
+
+    private func deleteExistingTopicBullets(for itemId: UUID) {
+        let descriptor = FetchDescriptor<ManualTopicBullet>(
+            predicate: #Predicate<ManualTopicBullet> { bullet in
+                bullet.itemId == itemId
+            }
+        )
+
+        if let existingBullets = try? modelContext.fetch(descriptor) {
+            for bullet in existingBullets {
+                modelContext.delete(bullet)
             }
         }
     }

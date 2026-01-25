@@ -25,6 +25,7 @@ struct AllOurThingsApp: App {
         let schema = Schema([
             Item.self,
             ManualSection.self,
+            ManualTopicBullet.self,
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,
