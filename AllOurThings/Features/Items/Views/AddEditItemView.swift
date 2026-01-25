@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 import PhotosUI
 import FoundationModels
 
@@ -289,8 +288,8 @@ struct AddEditItemView: View {
                                 .font(Theme.Fonts.cosySubheadline())
                                 .foregroundColor(Theme.Colors.cocoaBrown)
 
-                            ForEach(capabilities, id: \.id) { feature in
-                                if let index = temporaryFeatures.firstIndex(where: { $0.id == feature.id }) {
+                            ForEach(Array(temporaryFeatures.enumerated()), id: \.element.id) { index, feature in
+                                if feature.type == .capability {
                                     HStack(spacing: Theme.Spacing.small) {
                                         TextField("Capability", text: $temporaryFeatures[index].text)
                                             .font(Theme.Fonts.cosyBody())
@@ -327,8 +326,8 @@ struct AddEditItemView: View {
                                 .font(Theme.Fonts.cosySubheadline())
                                 .foregroundColor(Theme.Colors.cocoaBrown)
 
-                            ForEach(specifications, id: \.id) { feature in
-                                if let index = temporaryFeatures.firstIndex(where: { $0.id == feature.id }) {
+                            ForEach(Array(temporaryFeatures.enumerated()), id: \.element.id) { index, feature in
+                                if feature.type == .specification {
                                     HStack(spacing: Theme.Spacing.small) {
                                         TextField("Specification", text: $temporaryFeatures[index].text)
                                             .font(Theme.Fonts.cosyBody())
@@ -1033,3 +1032,4 @@ extension UIImage {
         return normalizedImage ?? self
     }
 }
+
