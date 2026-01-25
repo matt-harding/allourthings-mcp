@@ -117,7 +117,7 @@ struct WelcomePage1: View {
                 .padding(.horizontal, 40)
 
             // Description
-            Text("Keep track of all your household items, manuals, and warranties in one cosy place")
+            Text("Keep track of all your household items, manuals, and warranties in one place")
                 .font(Theme.Fonts.cosyBody())
                 .foregroundColor(Theme.Colors.softGray)
                 .multilineTextAlignment(.center)

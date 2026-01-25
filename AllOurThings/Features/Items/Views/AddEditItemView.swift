@@ -28,9 +28,7 @@ struct AddEditItemView: View {
     @State private var pdfStats: ExtractionStats?
     @State private var pdfError: String?
     @State private var temporarySections: [SectionData] = []
-    @State private var isExtractingFeatures = false
     @State private var pdfProcessingStage: String?
-    @State private var temporaryFeatures: [ItemFeature] = []
 
     // Image fields
     @State private var imageData: Data?
@@ -74,14 +72,6 @@ struct AddEditItemView: View {
         return categorySelection
     }
 
-    private var capabilities: [ItemFeature] {
-        temporaryFeatures.filter { $0.type == .capability }
-    }
-
-    private var specifications: [ItemFeature] {
-        temporaryFeatures.filter { $0.type == .specification }
-    }
-
     var isSaveDisabled: Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
         manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -104,7 +94,6 @@ struct AddEditItemView: View {
             _imageData = State(initialValue: item.imageData)
             _imageFileName = State(initialValue: item.imageFileName)
             _imageFilePath = State(initialValue: item.imageFilePath)
-            _temporaryFeatures = State(initialValue: item.features)
             if categoryOptions.contains(item.category) {
                 _categorySelection = State(initialValue: item.category)
                 _customCategory = State(initialValue: "")
@@ -276,89 +265,6 @@ struct AddEditItemView: View {
                             )
                     }
 
-                    // Features Section
-                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                        Text("Key Features")
-                            .font(Theme.Fonts.cosyHeadline())
-                            .foregroundColor(Theme.Colors.mutedPlum)
-                            .padding(.horizontal, Theme.Spacing.medium)
-
-                        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                            Text("Capabilities")
-                                .font(Theme.Fonts.cosySubheadline())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-
-                            ForEach(Array(temporaryFeatures.enumerated()), id: \.element.id) { index, feature in
-                                if feature.type == .capability {
-                                    HStack(spacing: Theme.Spacing.small) {
-                                        TextField("Capability", text: $temporaryFeatures[index].text)
-                                            .font(Theme.Fonts.cosyBody())
-                                            .foregroundColor(Theme.Colors.cocoaBrown)
-                                            .padding(.horizontal, Theme.Spacing.small)
-                                            .padding(.vertical, Theme.Spacing.xs)
-                                            .background(Theme.Colors.warmCream)
-                                            .cornerRadius(Theme.CornerRadius.medium)
-
-                                        Button(action: { removeFeature(id: feature.id) }) {
-                                            Image(systemName: "trash")
-                                                .foregroundColor(Theme.Colors.peach)
-                                        }
-                                    }
-                                }
-                            }
-
-                            Button(action: addCapability) {
-                                HStack(spacing: Theme.Spacing.xs) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundColor(Theme.Colors.mintGreen)
-                                    Text("Add Capability")
-                                        .font(Theme.Fonts.cosyBody())
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                }
-                            }
-                            .padding(.top, Theme.Spacing.xs)
-
-                            Divider()
-                                .background(Theme.Colors.gentleBorder)
-                                .padding(.vertical, Theme.Spacing.xs)
-
-                            Text("Specifications")
-                                .font(Theme.Fonts.cosySubheadline())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-
-                            ForEach(Array(temporaryFeatures.enumerated()), id: \.element.id) { index, feature in
-                                if feature.type == .specification {
-                                    HStack(spacing: Theme.Spacing.small) {
-                                        TextField("Specification", text: $temporaryFeatures[index].text)
-                                            .font(Theme.Fonts.cosyBody())
-                                            .foregroundColor(Theme.Colors.cocoaBrown)
-                                            .padding(.horizontal, Theme.Spacing.small)
-                                            .padding(.vertical, Theme.Spacing.xs)
-                                            .background(Theme.Colors.warmCream)
-                                            .cornerRadius(Theme.CornerRadius.medium)
-
-                                        Button(action: { removeFeature(id: feature.id) }) {
-                                            Image(systemName: "trash")
-                                                .foregroundColor(Theme.Colors.peach)
-                                        }
-                                    }
-                                }
-                            }
-
-                            Button(action: addSpecification) {
-                                HStack(spacing: Theme.Spacing.xs) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundColor(Theme.Colors.mintGreen)
-                                    Text("Add Specification")
-                                        .font(Theme.Fonts.cosyBody())
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                }
-                            }
-                            .padding(.top, Theme.Spacing.xs)
-                        }
-                        .cosyCard(padding: Theme.Spacing.medium)
-                    }
-
                     // Manual Section
                     VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                         Text("Manual")
@@ -390,24 +296,6 @@ struct AddEditItemView: View {
                                     Text(stats.summary)
                                         .font(Theme.Fonts.cosyCaption())
                                         .foregroundColor(Theme.Colors.softGray)
-                                        .padding(.horizontal, Theme.Spacing.small)
-                                }
-
-                                // Feature extraction status
-                                if isExtractingFeatures {
-                                    HStack(spacing: Theme.Spacing.xs) {
-                                        ProgressView()
-                                            .tint(Theme.Colors.cocoaBrown)
-                                            .scaleEffect(0.8)
-                                        Text("Extracting features...")
-                                            .font(Theme.Fonts.cosyCaption())
-                                            .foregroundColor(Theme.Colors.cocoaBrown)
-                                    }
-                                    .padding(.horizontal, Theme.Spacing.small)
-                                } else if !temporaryFeatures.isEmpty {
-                                    Text("\(temporaryFeatures.count) features extracted")
-                                        .font(Theme.Fonts.cosyCaption())
-                                        .foregroundColor(Theme.Colors.mintGreen)
                                         .padding(.horizontal, Theme.Spacing.small)
                                 }
                             }
@@ -666,17 +554,6 @@ struct AddEditItemView: View {
             }
             let sections = await SectionSummaryExtractor.shared.summarizeSections(extractedSections, model: model)
 
-            // Extract features using Apple Intelligence
-            await MainActor.run {
-                isExtractingFeatures = true
-                pdfProcessingStage = "Extracting features"
-            }
-
-            let features = await FeatureExtractor.shared.extractFeatures(
-                from: result.text,
-                model: model
-            )
-
             await MainActor.run {
                 // Delete old PDF and sections if replacing
                 if let oldPath = manualFilePath {
@@ -694,10 +571,6 @@ struct AddEditItemView: View {
 
                 // Store sections temporarily (will be saved to database on item save)
                 temporarySections = sections
-
-                // Store features temporarily (will be saved to database on item save)
-                temporaryFeatures = features
-                isExtractingFeatures = false
             }
         }
     }
@@ -714,7 +587,6 @@ struct AddEditItemView: View {
         pdfStats = nil
         pdfError = nil
         temporarySections = []
-        temporaryFeatures = []
     }
 
     // MARK: - Photo Handling
@@ -825,7 +697,6 @@ struct AddEditItemView: View {
             item.imageData = imageData
             item.imageFileName = imageFileName
             item.imageFilePath = imageFilePath
-            item.features = cleanedFeatures(from: temporaryFeatures)
 
             savedItem = item
 
@@ -853,9 +724,6 @@ struct AddEditItemView: View {
             )
             modelContext.insert(newItem)
             savedItem = newItem
-
-            // Save features for new item
-            newItem.features = cleanedFeatures(from: temporaryFeatures)
         }
 
         // Save sections to database if any
@@ -881,22 +749,6 @@ struct AddEditItemView: View {
         }
 
         dismiss()
-    }
-
-    private func cleanedFeatures(from features: [ItemFeature]) -> [ItemFeature] {
-        features.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-    }
-
-    private func addCapability() {
-        temporaryFeatures.append(ItemFeature(type: .capability, text: ""))
-    }
-
-    private func addSpecification() {
-        temporaryFeatures.append(ItemFeature(type: .specification, text: ""))
-    }
-
-    private func removeFeature(id: UUID) {
-        temporaryFeatures.removeAll { $0.id == id }
     }
 
     private func deleteExistingSections(for itemId: UUID) {
@@ -1032,4 +884,3 @@ extension UIImage {
         return normalizedImage ?? self
     }
 }
-

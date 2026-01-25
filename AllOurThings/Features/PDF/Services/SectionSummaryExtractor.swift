@@ -44,6 +44,8 @@ final class SectionSummaryExtractor {
                 let response = try await session.respond(to: prompt)
                 let summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
 
+                logger.info("🧾 [SectionSummaryExtractor] Summary for '\(section.heading)': \(summary)")
+
                 var updated = section
                 updated.summary = summary
                 summarizedSections.append(updated)

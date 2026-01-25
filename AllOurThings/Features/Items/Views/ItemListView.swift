@@ -238,264 +238,21 @@ struct ItemDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingEditSheet = false
     @State private var manualSectionCount: Int = 0
+    @State private var manualSections: [ManualSection] = []
+    @State private var sectionsByTopic: [ManualTopic: [ManualSection]] = [:]
     @State private var pdfToShow: PDFViewerData?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-                // Header Section
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(item.name)
-                        .font(Theme.Fonts.cosyExtraLargeTitle())
-                        .foregroundColor(Theme.Colors.cocoaBrown)
-
-                    if !item.category.isEmpty {
-                        Text(item.category)
-                            .font(Theme.Fonts.cosyLargeTitle())
-                            .foregroundColor(Theme.Colors.categoryColor(for: item.category))
-                    }
-                }
-
-                // Basic Information Section
-                if !item.category.isEmpty ||
-                    !item.manufacturer.isEmpty ||
-                    !item.modelNumber.isEmpty ||
-                    !item.location.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                        Text("Basic Information")
-                            .font(Theme.Fonts.cosyHeadline())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
-
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                            if !item.category.isEmpty {
-                                DetailRowValue(title: "Category", value: item.category)
-                            }
-                            if !item.manufacturer.isEmpty {
-                                DetailRowValue(title: "Manufacturer", value: item.manufacturer)
-                            }
-                            if !item.modelNumber.isEmpty {
-                                DetailRowValue(title: "Model Number", value: item.modelNumber)
-                            }
-                            if !item.location.isEmpty {
-                                DetailRowValue(title: "Location", value: item.location)
-                            }
-                        }
-                    }
-                    .cosyCard(padding: Theme.Spacing.medium)
-                }
-
-                // Dates Section
-                if item.purchaseDate != nil || item.warrantyExpirationDate != nil {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                        Text("Dates")
-                            .font(Theme.Fonts.cosyHeadline())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
-
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                            if let purchaseDate = item.purchaseDate {
-                                DetailRowValue(
-                                    title: "Purchase Date",
-                                    value: purchaseDate.formatted(date: .abbreviated, time: .omitted)
-                                )
-                            }
-                            if let warrantyDate = item.warrantyExpirationDate {
-                                DetailRowValue(
-                                    title: "Warranty Expires",
-                                    value: warrantyDate.formatted(date: .abbreviated, time: .omitted)
-                                )
-                            }
-                        }
-                    }
-                    .cosyCard(padding: Theme.Spacing.medium)
-                }
-
-                // Photo Section
-                if let imageData = item.imageData,
-                   let uiImage = UIImage(data: imageData) {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                        Text("Photo")
-                            .font(Theme.Fonts.cosyHeadline())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
-
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .cornerRadius(Theme.CornerRadius.large)
-                            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                                    .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
-                            )
-                    }
-                    .cosyCard(padding: Theme.Spacing.medium)
-                }
-
-                // Notes Section
-                if !item.notes.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Image(systemName: "note.text")
-                                .foregroundColor(Theme.Colors.butterYellow)
-                            Text("Notes")
-                                .font(Theme.Fonts.cosyHeadline())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                        }
-
-                        Text(item.notes)
-                            .font(Theme.Fonts.cosyBody())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
-                    }
-                    .padding(Theme.Spacing.medium)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.Colors.butterYellow.opacity(0.2))
-                    .cornerRadius(Theme.CornerRadius.medium)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                            .stroke(Theme.Colors.butterYellow, lineWidth: Theme.BorderWidth.thick)
-                    )
-                }
-
-                // Features Section
-                if !item.features.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Image(systemName: "star.fill")
-                                .foregroundColor(Theme.Colors.mintGreen)
-                            Text("Key Features")
-                                .font(Theme.Fonts.cosyHeadline())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                        }
-
-                        let capabilities = item.features.filter { $0.type == .capability }
-                        if !capabilities.isEmpty {
-                            Text("Capabilities")
-                                .font(Theme.Fonts.cosySubheadline())
-                                .foregroundColor(Theme.Colors.mutedPlum)
-                                .textCase(.uppercase)
-                                .padding(.top, Theme.Spacing.xs)
-
-                            ForEach(capabilities) { feature in
-                                HStack(alignment: .top, spacing: Theme.Spacing.xs) {
-                                    Text("•")
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                    Text(feature.text)
-                                        .font(Theme.Fonts.cosyBody())
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                }
-                            }
-                        }
-
-                        let specifications = item.features.filter { $0.type == .specification }
-                        if !specifications.isEmpty {
-                            Text("Specifications")
-                                .font(Theme.Fonts.cosySubheadline())
-                                .foregroundColor(Theme.Colors.mutedPlum)
-                                .textCase(.uppercase)
-                                .padding(.top, Theme.Spacing.small)
-
-                            ForEach(specifications) { feature in
-                                HStack(alignment: .top, spacing: Theme.Spacing.xs) {
-                                    Text("•")
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                    Text(feature.text)
-                                        .font(Theme.Fonts.cosyBody())
-                                        .foregroundColor(Theme.Colors.cocoaBrown)
-                                }
-                            }
-                        }
-                    }
-                    .padding(Theme.Spacing.medium)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.Colors.mintGreen.opacity(0.1))
-                    .cornerRadius(Theme.CornerRadius.medium)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                            .stroke(Theme.Colors.mintGreen, lineWidth: Theme.BorderWidth.thick)
-                    )
-                }
-
-                // Manual Section
-                if let manualPath = item.manualFilePath, !manualPath.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Image(systemName: "doc.text.fill")
-                                .foregroundColor(Theme.Colors.blushPink)
-                            Text("Manual")
-                                .font(Theme.Fonts.cosyHeadline())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                            Spacer()
-                            Text("\(manualSectionCount) sections")
-                                .font(Theme.Fonts.cosyCaption())
-                                .foregroundColor(Theme.Colors.softGray)
-                        }
-
-                        if let manualName = item.manualFileName, !manualName.isEmpty {
-                            Text(manualName)
-                                .font(Theme.Fonts.cosyBody())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                                .lineLimit(2)
-                        }
-
-                        Button(action: {
-                            pdfToShow = PDFViewerData(
-                                pdfPath: manualPath,
-                                pageNumber: 1,
-                                itemName: item.name
-                            )
-                        }) {
-                            HStack(spacing: Theme.Spacing.xs) {
-                                Image(systemName: "book.fill")
-                                Text("Open Manual")
-                            }
-                            .font(Theme.Fonts.cosyBody())
-                            .foregroundColor(Theme.Colors.cocoaBrown)
-                            .padding(.horizontal, Theme.Spacing.small)
-                            .padding(.vertical, Theme.Spacing.xs)
-                            .background(Theme.Colors.warmCream)
-                            .cornerRadius(Theme.CornerRadius.medium)
-                        }
-                        .cosyButtonPress()
-                    }
-                    .padding(Theme.Spacing.medium)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.Colors.peach.opacity(0.15))
-                    .cornerRadius(Theme.CornerRadius.medium)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                            .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
-                    )
-                }
-
-                // Manual & Chat Section
-                if manualSectionCount > 0 {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Image(systemName: "book.fill")
-                                .foregroundColor(Theme.Colors.blushPink)
-                            Text("Q&A")
-                                .font(Theme.Fonts.cosyHeadline())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                            Spacer()
-                            Text("\(manualSectionCount) sections")
-                                .font(Theme.Fonts.cosyCaption())
-                                .foregroundColor(Theme.Colors.softGray)
-                        }
-                        .padding(.horizontal, Theme.Spacing.medium)
-                        .padding(.top, Theme.Spacing.medium)
-
-                        // Embedded chat
-                        ItemChatView(item: item)
-                            .frame(height: 400)
-                    }
-                    .background(Theme.Colors.cloudWhite)
-                    .cornerRadius(Theme.CornerRadius.xl)
-                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                            .stroke(Theme.Colors.blushPink, lineWidth: Theme.BorderWidth.thick)
-                    )
-                }
+                headerSection
+                basicInformationSection
+                datesSection
+                photoSection
+                notesSection
+                manualSection
+                manualTopicsSection
+                chatSection
 
                 Spacer()
             }
@@ -545,10 +302,359 @@ struct ItemDetailView: View {
             section.itemId == itemId
         }
 
-        let count = (try? modelContext.fetchCount(descriptor)) ?? 0
+        let sections = (try? modelContext.fetch(descriptor)) ?? []
         await MainActor.run {
-            manualSectionCount = count
+            manualSections = sections
+            manualSectionCount = sections.count
+            sectionsByTopic = ManualTopicTagger.shared.tagSections(sections)
         }
+    }
+
+    private func openManual(pageNumber: Int) {
+        guard let manualPath = item.manualFilePath, !manualPath.isEmpty else { return }
+        pdfToShow = PDFViewerData(
+            pdfPath: manualPath,
+            pageNumber: pageNumber,
+            itemName: item.name
+        )
+    }
+
+    @ViewBuilder
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(item.name)
+                .font(Theme.Fonts.cosyExtraLargeTitle())
+                .foregroundColor(Theme.Colors.cocoaBrown)
+
+            if !item.category.isEmpty {
+                Text(item.category)
+                    .font(Theme.Fonts.cosyLargeTitle())
+                    .foregroundColor(Theme.Colors.categoryColor(for: item.category))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var basicInformationSection: some View {
+        if !item.category.isEmpty ||
+            !item.manufacturer.isEmpty ||
+            !item.modelNumber.isEmpty ||
+            !item.location.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                Text("Basic Information")
+                    .font(Theme.Fonts.cosyHeadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                    if !item.category.isEmpty {
+                        DetailRowValue(title: "Category", value: item.category)
+                    }
+                    if !item.manufacturer.isEmpty {
+                        DetailRowValue(title: "Manufacturer", value: item.manufacturer)
+                    }
+                    if !item.modelNumber.isEmpty {
+                        DetailRowValue(title: "Model Number", value: item.modelNumber)
+                    }
+                    if !item.location.isEmpty {
+                        DetailRowValue(title: "Location", value: item.location)
+                    }
+                }
+            }
+            .cosyCard(padding: Theme.Spacing.medium)
+        }
+    }
+
+    @ViewBuilder
+    private var datesSection: some View {
+        if item.purchaseDate != nil || item.warrantyExpirationDate != nil {
+            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                Text("Dates")
+                    .font(Theme.Fonts.cosyHeadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                    if let purchaseDate = item.purchaseDate {
+                        DetailRowValue(
+                            title: "Purchase Date",
+                            value: purchaseDate.formatted(date: .abbreviated, time: .omitted)
+                        )
+                    }
+                    if let warrantyDate = item.warrantyExpirationDate {
+                        DetailRowValue(
+                            title: "Warranty Expires",
+                            value: warrantyDate.formatted(date: .abbreviated, time: .omitted)
+                        )
+                    }
+                }
+            }
+            .cosyCard(padding: Theme.Spacing.medium)
+        }
+    }
+
+    @ViewBuilder
+    private var photoSection: some View {
+        if let imageData = item.imageData,
+           let uiImage = UIImage(data: imageData) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                Text("Photo")
+                    .font(Theme.Fonts.cosyHeadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .cornerRadius(Theme.CornerRadius.large)
+                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                            .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
+                    )
+            }
+            .cosyCard(padding: Theme.Spacing.medium)
+        }
+    }
+
+    @ViewBuilder
+    private var notesSection: some View {
+        if !item.notes.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(systemName: "note.text")
+                        .foregroundColor(Theme.Colors.butterYellow)
+                    Text("Notes")
+                        .font(Theme.Fonts.cosyHeadline())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
+                }
+
+                Text(item.notes)
+                    .font(Theme.Fonts.cosyBody())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+            }
+            .padding(Theme.Spacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Colors.butterYellow.opacity(0.2))
+            .cornerRadius(Theme.CornerRadius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                    .stroke(Theme.Colors.butterYellow, lineWidth: Theme.BorderWidth.thick)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var manualSection: some View {
+        if let manualPath = item.manualFilePath, !manualPath.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(systemName: "doc.text.fill")
+                        .foregroundColor(Theme.Colors.blushPink)
+                    Text("Manual")
+                        .font(Theme.Fonts.cosyHeadline())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
+                    Spacer()
+                    Text("\(manualSectionCount) sections")
+                        .font(Theme.Fonts.cosyCaption())
+                        .foregroundColor(Theme.Colors.softGray)
+                }
+
+                if let manualName = item.manualFileName, !manualName.isEmpty {
+                    Text(manualName)
+                        .font(Theme.Fonts.cosyBody())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
+                        .lineLimit(2)
+                }
+
+                Button(action: {
+                    pdfToShow = PDFViewerData(
+                        pdfPath: manualPath,
+                        pageNumber: 1,
+                        itemName: item.name
+                    )
+                }) {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Image(systemName: "book.fill")
+                        Text("Open Manual")
+                    }
+                    .font(Theme.Fonts.cosyBody())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+                    .padding(.horizontal, Theme.Spacing.small)
+                    .padding(.vertical, Theme.Spacing.xs)
+                    .background(Theme.Colors.warmCream)
+                    .cornerRadius(Theme.CornerRadius.medium)
+                }
+                .cosyButtonPress()
+            }
+            .padding(Theme.Spacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Colors.peach.opacity(0.15))
+            .cornerRadius(Theme.CornerRadius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                    .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var manualTopicsSection: some View {
+        if !manualSections.isEmpty {
+            ManualTopicsSectionView(
+                sectionsByTopic: sectionsByTopic,
+                openManual: openManual
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var chatSection: some View {
+        if manualSectionCount > 0 {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(systemName: "book.fill")
+                        .foregroundColor(Theme.Colors.blushPink)
+                    Text("Q&A")
+                        .font(Theme.Fonts.cosyHeadline())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
+                    Spacer()
+                    Text("\(manualSectionCount) sections")
+                        .font(Theme.Fonts.cosyCaption())
+                        .foregroundColor(Theme.Colors.softGray)
+                }
+                .padding(.horizontal, Theme.Spacing.medium)
+                .padding(.top, Theme.Spacing.medium)
+
+                ItemChatView(item: item)
+                    .frame(height: 400)
+            }
+            .background(Theme.Colors.cloudWhite)
+            .cornerRadius(Theme.CornerRadius.xl)
+            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                    .stroke(Theme.Colors.blushPink, lineWidth: Theme.BorderWidth.thick)
+            )
+        }
+    }
+}
+
+struct ManualTopicsSectionView: View {
+    let sectionsByTopic: [ManualTopic: [ManualSection]]
+    let openManual: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: "list.bullet.rectangle")
+                    .foregroundColor(Theme.Colors.softLavender)
+                Text("Manual Topics")
+                    .font(Theme.Fonts.cosyHeadline())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+            }
+
+            ForEach(ManualTopic.allCases, id: \.self) { topic in
+                ManualTopicCardView(
+                    topic: topic,
+                    sections: sectionsByTopic[topic] ?? [],
+                    openManual: openManual
+                )
+            }
+        }
+        .padding(Theme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Colors.softLavender.opacity(0.15))
+        .cornerRadius(Theme.CornerRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                .stroke(Theme.Colors.softLavender, lineWidth: Theme.BorderWidth.thick)
+        )
+    }
+}
+
+struct ManualTopicCardView: View {
+    let topic: ManualTopic
+    let sections: [ManualSection]
+    let openManual: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            HStack {
+                Text(topic.displayName)
+                    .font(Theme.Fonts.cosySubheadline())
+                    .foregroundColor(Theme.Colors.mutedPlum)
+                Spacer()
+                Text("\(sections.count) sections")
+                    .font(Theme.Fonts.cosyCaption())
+                    .foregroundColor(Theme.Colors.softGray)
+            }
+
+            if sections.isEmpty {
+                Text("No manual content found for this topic.")
+                    .font(Theme.Fonts.cosyCaption())
+                    .foregroundColor(Theme.Colors.softGray)
+            } else {
+                ForEach(sections) { section in
+                    ManualSectionCardView(section: section, openManual: openManual)
+                }
+            }
+        }
+        .padding(Theme.Spacing.small)
+        .background(Theme.Colors.warmCream.opacity(0.6))
+        .cornerRadius(Theme.CornerRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+        )
+    }
+}
+
+struct ManualSectionCardView: View {
+    let section: ManualSection
+    let openManual: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(section.displayHeading)
+                .font(Theme.Fonts.cosySubheadline())
+                .foregroundColor(Theme.Colors.cocoaBrown)
+
+            if section.pageNumbers.isEmpty {
+                Text("Page info unavailable")
+                    .font(Theme.Fonts.cosyCaption())
+                    .foregroundColor(Theme.Colors.softGray)
+            } else {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 80), spacing: Theme.Spacing.xs)],
+                    spacing: Theme.Spacing.xs
+                ) {
+                    ForEach(section.pageNumbers.sorted(), id: \.self) { page in
+                        Button(action: { openManual(page) }) {
+                            Text("Page \(page)")
+                                .font(Theme.Fonts.cosyCaption())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .padding(.horizontal, Theme.Spacing.xs)
+                                .padding(.vertical, Theme.Spacing.xxs)
+                                .background(Theme.Colors.warmCream)
+                                .cornerRadius(Theme.CornerRadius.small)
+                        }
+                        .cosyButtonPress()
+                    }
+                }
+            }
+
+            if !section.content.isEmpty {
+                Text(section.content)
+                    .font(Theme.Fonts.cosyBody())
+                    .foregroundColor(Theme.Colors.cocoaBrown)
+            }
+        }
+        .padding(Theme.Spacing.small)
+        .background(Theme.Colors.cloudWhite)
+        .cornerRadius(Theme.CornerRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+        )
     }
 }
 

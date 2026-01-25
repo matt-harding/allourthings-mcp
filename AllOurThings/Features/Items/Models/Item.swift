@@ -8,25 +8,6 @@
 import Foundation
 import SwiftData
 
-// MARK: - Item Feature
-
-struct ItemFeature: Codable, Identifiable, Equatable {
-    let id: UUID
-    var type: FeatureType
-    var text: String
-
-    enum FeatureType: String, Codable {
-        case capability
-        case specification
-    }
-
-    init(type: FeatureType, text: String) {
-        self.id = UUID()
-        self.type = type
-        self.text = text
-    }
-}
-
 // MARK: - Item Model
 
 @Model
@@ -52,10 +33,7 @@ final class Item {
     var imageFileName: String?
     var imageFilePath: String?
 
-    // Extracted features from manual (JSON storage)
-    var extractedFeatures: Data?
-
-    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, imageData: Data? = nil, imageFileName: String? = nil, imageFilePath: String? = nil, extractedFeatures: Data? = nil) {
+    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, imageData: Data? = nil, imageFileName: String? = nil, imageFilePath: String? = nil) {
         self.id = UUID()
         self.name = name
         self.manufacturer = manufacturer
@@ -71,19 +49,6 @@ final class Item {
         self.imageData = imageData
         self.imageFileName = imageFileName
         self.imageFilePath = imageFilePath
-        self.extractedFeatures = extractedFeatures
         self.timestamp = Date()
-    }
-
-    // MARK: - Computed Properties
-
-    var features: [ItemFeature] {
-        get {
-            guard let data = extractedFeatures else { return [] }
-            return (try? JSONDecoder().decode([ItemFeature].self, from: data)) ?? []
-        }
-        set {
-            extractedFeatures = try? JSONEncoder().encode(newValue)
-        }
     }
 }
