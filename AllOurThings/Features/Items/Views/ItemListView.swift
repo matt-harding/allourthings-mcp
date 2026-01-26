@@ -237,9 +237,7 @@ struct ItemDetailView: View {
     let item: Item
     @Environment(\.modelContext) private var modelContext
     @State private var showingEditSheet = false
-    @State private var manualSectionCount: Int = 0
     @State private var manualSections: [ManualSection] = []
-    @State private var topicBulletsByTopic: [ManualTopic: [ManualTopicBullet]] = [:]
     @State private var pdfToShow: PDFViewerData?
 
     var body: some View {
@@ -251,8 +249,7 @@ struct ItemDetailView: View {
                 photoSection
                 notesSection
                 manualSection
-                manualTopicsSection
-                chatSection
+                appendixSection
 
                 Spacer()
             }
@@ -303,15 +300,8 @@ struct ItemDetailView: View {
         }
 
         let sections = (try? modelContext.fetch(descriptor)) ?? []
-        var bulletsDescriptor = FetchDescriptor<ManualTopicBullet>()
-        bulletsDescriptor.predicate = #Predicate { bullet in
-            bullet.itemId == itemId
-        }
-        let bullets = (try? modelContext.fetch(bulletsDescriptor)) ?? []
         await MainActor.run {
             manualSections = sections
-            manualSectionCount = sections.count
-            topicBulletsByTopic = groupTopicBullets(bullets)
         }
     }
 
@@ -324,17 +314,7 @@ struct ItemDetailView: View {
         )
     }
 
-    private func groupTopicBullets(_ bullets: [ManualTopicBullet]) -> [ManualTopic: [ManualTopicBullet]] {
-        var grouped: [ManualTopic: [ManualTopicBullet]] = [:]
-        for bullet in bullets {
-            guard let topic = bullet.topic else { continue }
-            grouped[topic, default: []].append(bullet)
-        }
-        for topic in grouped.keys {
-            grouped[topic]?.sort { $0.bulletIndex < $1.bulletIndex }
-        }
-        return grouped
-    }
+    
 
     @ViewBuilder
     private var headerSection: some View {
@@ -470,7 +450,7 @@ struct ItemDetailView: View {
                         .font(Theme.Fonts.cosyHeadline())
                         .foregroundColor(Theme.Colors.cocoaBrown)
                     Spacer()
-                    Text("\(manualSectionCount) sections")
+                    Text("\(manualSections.count) pages")
                         .font(Theme.Fonts.cosyCaption())
                         .foregroundColor(Theme.Colors.softGray)
                 }
@@ -514,49 +494,15 @@ struct ItemDetailView: View {
     }
 
     @ViewBuilder
-    private var manualTopicsSection: some View {
+    private var appendixSection: some View {
         if !manualSections.isEmpty {
-            ManualTopicsSectionView(
-                bulletsByTopic: topicBulletsByTopic,
-                openManual: openManual
-            )
-        }
-    }
-
-    @ViewBuilder
-    private var chatSection: some View {
-        if manualSectionCount > 0 {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                HStack(spacing: Theme.Spacing.xs) {
-                    Image(systemName: "book.fill")
-                        .foregroundColor(Theme.Colors.blushPink)
-                    Text("Q&A")
-                        .font(Theme.Fonts.cosyHeadline())
-                        .foregroundColor(Theme.Colors.cocoaBrown)
-                    Spacer()
-                    Text("\(manualSectionCount) sections")
-                        .font(Theme.Fonts.cosyCaption())
-                        .foregroundColor(Theme.Colors.softGray)
-                }
-                .padding(.horizontal, Theme.Spacing.medium)
-                .padding(.top, Theme.Spacing.medium)
-
-                ItemChatView(item: item)
-                    .frame(height: 400)
-            }
-            .background(Theme.Colors.cloudWhite)
-            .cornerRadius(Theme.CornerRadius.xl)
-            .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                    .stroke(Theme.Colors.blushPink, lineWidth: Theme.BorderWidth.thick)
-            )
+            AppendixSectionView(sections: manualSections, openManual: openManual)
         }
     }
 }
 
-struct ManualTopicsSectionView: View {
-    let bulletsByTopic: [ManualTopic: [ManualTopicBullet]]
+struct AppendixSectionView: View {
+    let sections: [ManualSection]
     let openManual: (Int) -> Void
 
     var body: some View {
@@ -564,17 +510,17 @@ struct ManualTopicsSectionView: View {
             HStack(spacing: Theme.Spacing.xs) {
                 Image(systemName: "list.bullet.rectangle")
                     .foregroundColor(Theme.Colors.softLavender)
-                Text("Manual Topics")
+                Text("Appendix")
                     .font(Theme.Fonts.cosyHeadline())
                     .foregroundColor(Theme.Colors.cocoaBrown)
+                Spacer()
+                Text("\(sections.count) pages")
+                    .font(Theme.Fonts.cosyCaption())
+                    .foregroundColor(Theme.Colors.softGray)
             }
 
-            ForEach(ManualTopic.allCases, id: \.self) { topic in
-                ManualTopicCardView(
-                    topic: topic,
-                    bullets: bulletsByTopic[topic] ?? [],
-                    openManual: openManual
-                )
+            ForEach(sections.sorted(by: { ($0.pageNumbers.first ?? 0) < ($1.pageNumbers.first ?? 0) })) { section in
+                AppendixEntryView(section: section, openManual: openManual)
             }
         }
         .padding(Theme.Spacing.medium)
@@ -588,58 +534,19 @@ struct ManualTopicsSectionView: View {
     }
 }
 
-struct ManualTopicCardView: View {
-    let topic: ManualTopic
-    let bullets: [ManualTopicBullet]
+struct AppendixEntryView: View {
+    let section: ManualSection
     let openManual: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            HStack {
-                Text(topic.displayName)
-                    .font(Theme.Fonts.cosySubheadline())
-                    .foregroundColor(Theme.Colors.mutedPlum)
-                Spacer()
-                Text("\(bullets.count) bullets")
-                    .font(Theme.Fonts.cosyCaption())
-                    .foregroundColor(Theme.Colors.softGray)
-            }
+            Text(section.displayHeading)
+                .font(Theme.Fonts.cosySubheadline())
+                .foregroundColor(Theme.Colors.mutedPlum)
 
-            if bullets.isEmpty {
-                Text("No bullets available for this topic.")
-                    .font(Theme.Fonts.cosyCaption())
-                    .foregroundColor(Theme.Colors.softGray)
-            } else {
-                ForEach(bullets) { bullet in
-                    ManualTopicBulletView(bullet: bullet, openManual: openManual)
-                }
-            }
-        }
-        .padding(Theme.Spacing.small)
-        .background(Theme.Colors.warmCream.opacity(0.6))
-        .cornerRadius(Theme.CornerRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
-        )
-    }
-}
-
-struct ManualTopicBulletView: View {
-    let bullet: ManualTopicBullet
-    let openManual: (Int) -> Void
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.xs) {
-            Text("•")
-                .foregroundColor(Theme.Colors.cocoaBrown)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(bullet.text)
-                    .font(Theme.Fonts.cosyBody())
-                    .foregroundColor(Theme.Colors.cocoaBrown)
-
-                Button(action: { openManual(bullet.pageNumber) }) {
-                    Text("Page \(bullet.pageNumber)")
+            if let pageNumber = section.pageNumbers.first {
+                Button(action: { openManual(pageNumber) }) {
+                    Text("Page \(pageNumber)")
                         .font(Theme.Fonts.cosyCaption())
                         .foregroundColor(Theme.Colors.cocoaBrown)
                         .padding(.horizontal, Theme.Spacing.xs)
@@ -651,7 +558,7 @@ struct ManualTopicBulletView: View {
             }
         }
         .padding(Theme.Spacing.small)
-        .background(Theme.Colors.cloudWhite)
+        .background(Theme.Colors.warmCream.opacity(0.6))
         .cornerRadius(Theme.CornerRadius.medium)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)

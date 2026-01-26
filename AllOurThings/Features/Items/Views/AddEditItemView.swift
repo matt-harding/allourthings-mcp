@@ -1,7 +1,6 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
-import FoundationModels
 
 struct AddEditItemView: View {
     @Environment(\.modelContext) private var modelContext
@@ -28,8 +27,8 @@ struct AddEditItemView: View {
     @State private var pdfStats: ExtractionStats?
     @State private var pdfError: String?
     @State private var temporarySections: [SectionData] = []
-    @State private var temporaryTopicBullets: [ManualTopic: [TopicBulletDraft]] = [:]
     @State private var pdfProcessingStage: String?
+    @State private var manualWasChanged = false
 
     // Image fields
     @State private var imageData: Data?
@@ -543,30 +542,9 @@ struct AddEditItemView: View {
             }
 
             await MainActor.run {
-                pdfProcessingStage = "Extracting sections"
+                pdfProcessingStage = "Building appendix"
             }
-            let model = SystemLanguageModel()
-
-            // Extract sections using Apple Intelligence (fallback to heuristic if unavailable)
-            let extractedSections = await SectionExtractor.shared.extractSections(from: result.text, model: model)
-
-            await MainActor.run {
-                pdfProcessingStage = "Summarizing sections"
-            }
-            let sections = await SectionSummaryExtractor.shared.summarizeSections(extractedSections, model: model)
-
-            await MainActor.run {
-                pdfProcessingStage = "Tagging topics"
-            }
-            let sectionsByTopic = ManualTopicTagger.shared.tagSectionData(sections)
-
-            await MainActor.run {
-                pdfProcessingStage = "Generating topic bullets"
-            }
-            let topicBullets = await TopicBulletExtractor.shared.generateBullets(
-                sectionsByTopic: sectionsByTopic,
-                model: model
-            )
+            let sections = AppendixBuilder.shared.buildAppendix(from: result.text)
 
             await MainActor.run {
                 // Delete old PDF and sections if replacing
@@ -582,10 +560,10 @@ struct AddEditItemView: View {
                 pdfError = nil
                 isProcessingPDF = false
                 pdfProcessingStage = nil
+                manualWasChanged = true
 
                 // Store sections temporarily (will be saved to database on item save)
                 temporarySections = sections
-                temporaryTopicBullets = topicBullets
             }
         }
     }
@@ -602,7 +580,7 @@ struct AddEditItemView: View {
         pdfStats = nil
         pdfError = nil
         temporarySections = []
-        temporaryTopicBullets = [:]
+        manualWasChanged = true
     }
 
     // MARK: - Photo Handling
@@ -716,10 +694,9 @@ struct AddEditItemView: View {
 
             savedItem = item
 
-            // Delete old sections if manual was replaced
-            if !temporarySections.isEmpty {
+            // Delete old appendix entries if manual was replaced or removed
+            if manualWasChanged {
                 deleteExistingSections(for: item.id)
-                deleteExistingTopicBullets(for: item.id)
             }
         } else {
             // Create new item
@@ -759,22 +736,6 @@ struct AddEditItemView: View {
             }
         }
 
-        if !temporaryTopicBullets.isEmpty {
-            for topic in ManualTopic.allCases {
-                let bullets = temporaryTopicBullets[topic] ?? []
-                for (index, bullet) in bullets.enumerated() {
-                    let stored = ManualTopicBullet(
-                        itemId: savedItem.id,
-                        topicRaw: topic.rawValue,
-                        text: bullet.text,
-                        pageNumber: bullet.pageNumber,
-                        bulletIndex: index
-                    )
-                    modelContext.insert(stored)
-                }
-            }
-        }
-
         do {
             try modelContext.save()
         } catch {
@@ -798,19 +759,7 @@ struct AddEditItemView: View {
         }
     }
 
-    private func deleteExistingTopicBullets(for itemId: UUID) {
-        let descriptor = FetchDescriptor<ManualTopicBullet>(
-            predicate: #Predicate<ManualTopicBullet> { bullet in
-                bullet.itemId == itemId
-            }
-        )
-
-        if let existingBullets = try? modelContext.fetch(descriptor) {
-            for bullet in existingBullets {
-                modelContext.delete(bullet)
-            }
-        }
-    }
+    
 }
 
 // MARK: - Date Picker Sheet
