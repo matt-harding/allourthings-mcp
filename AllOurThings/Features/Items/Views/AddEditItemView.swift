@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import FoundationModels
 
 struct AddEditItemView: View {
     @Environment(\.modelContext) private var modelContext
@@ -75,7 +76,8 @@ struct AddEditItemView: View {
     var isSaveDisabled: Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
         manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        resolvedCategory.isEmpty
+        resolvedCategory.isEmpty ||
+        isProcessingPDF
     }
 
     init(item: Item? = nil) {
@@ -534,7 +536,16 @@ struct AddEditItemView: View {
             await MainActor.run {
                 pdfProcessingStage = "Building appendix"
             }
-            let sections = AppendixBuilder.shared.buildAppendix(from: result.text)
+            let rawSections = AppendixBuilder.shared.buildAppendix(from: result.text)
+
+            await MainActor.run {
+                pdfProcessingStage = "Refining appendix"
+            }
+            let model = SystemLanguageModel()
+            let sections = await AppendixRefiner.shared.refineAppendix(
+                rawSections,
+                model: model
+            )
 
             await MainActor.run {
                 // Delete old PDF and sections if replacing

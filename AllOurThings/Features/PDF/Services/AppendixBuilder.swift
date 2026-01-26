@@ -64,16 +64,56 @@ final class AppendixBuilder {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        guard let firstLine = lines.first else {
+        guard !lines.isEmpty else {
             return "Page \(pageNumber)"
         }
 
-        let maxLength = 80
-        if firstLine.count <= maxLength {
-            return firstLine
+        if let headingLine = lines.prefix(15).first(where: { isHeading(line: $0) }) {
+            return truncateHeading(stripLeadingMarkers(headingLine))
         }
 
-        let trimmed = String(firstLine.prefix(maxLength))
-        return trimmed + "..."
+        return truncateHeading(stripLeadingMarkers(lines[0]))
+    }
+
+    private func truncateHeading(_ text: String) -> String {
+        let maxLength = 80
+        if text.count <= maxLength {
+            return text
+        }
+        return String(text.prefix(maxLength)) + "..."
+    }
+
+    private func isHeading(line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count >= 3 && trimmed.count <= 100 else { return false }
+
+        let isAllCaps = trimmed == trimmed.uppercased() && trimmed.rangeOfCharacter(from: .letters) != nil
+        let numberedPattern = "^\\d+\\.\\d*\\s+[A-Z]"
+        let isNumbered = trimmed.range(of: numberedPattern, options: .regularExpression) != nil
+
+        let headingKeywords = [
+            "introduction", "overview", "safety", "installation", "operation",
+            "maintenance", "cleaning", "troubleshooting", "specifications",
+            "warranty", "care", "instructions", "setup", "features", "usage",
+            "getting started", "quick start", "important", "caution", "warning"
+        ]
+        let lowercased = trimmed.lowercased()
+        let hasHeadingKeyword = headingKeywords.contains { lowercased.hasPrefix($0) || lowercased.contains($0) }
+
+        let words = trimmed.components(separatedBy: .whitespaces)
+        let isTitleCase = words.count <= 8 && words.allSatisfy { word in
+            guard let first = word.first else { return false }
+            return first.isUppercase || word.count <= 3
+        }
+
+        return isAllCaps || isNumbered || (hasHeadingKeyword && trimmed.count < 60) || isTitleCase
+    }
+
+    private func stripLeadingMarkers(_ text: String) -> String {
+        let pattern = "^[\\s\\-•–—*]+|^\\s*\\d+\\s*[\\.)\\-–—]+\\s*"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        let stripped = regex.stringByReplacingMatches(in: text, range: range, withTemplate: "")
+        return stripped.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

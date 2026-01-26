@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import FoundationModels
 
 struct ItemListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -220,8 +221,10 @@ struct ItemDetailView: View {
     let item: Item
     @Environment(\.modelContext) private var modelContext
     @State private var showingEditSheet = false
-    @State private var manualSections: [ManualSection] = []
+    @State private var manualEntries: [AppendixEntry] = []
     @State private var pdfToShow: PDFViewerData?
+    @State private var model = SystemLanguageModel()
+    @State private var showingManualInfo = false
 
     var body: some View {
         ScrollView {
@@ -261,6 +264,13 @@ struct ItemDetailView: View {
         .sheet(isPresented: $showingEditSheet) {
             AddEditItemView(item: item)
         }
+        .onChange(of: showingEditSheet) { _, isShowing in
+            if !isShowing {
+                Task {
+                    await checkManualSections()
+                }
+            }
+        }
         .sheet(item: $pdfToShow) { pdfData in
             PDFViewerView(
                 pdfPath: pdfData.pdfPath,
@@ -282,7 +292,14 @@ struct ItemDetailView: View {
 
         let sections = (try? modelContext.fetch(descriptor)) ?? []
         await MainActor.run {
-            manualSections = sections
+            manualEntries = sections.compactMap { section in
+                guard let pageNumber = section.pageNumbers.first else { return nil }
+                return AppendixEntry(
+                    id: section.id,
+                    heading: section.displayHeading,
+                    pageNumber: pageNumber
+                )
+            }
         }
     }
 
@@ -293,6 +310,13 @@ struct ItemDetailView: View {
             pageNumber: pageNumber,
             itemName: item.name
         )
+    }
+
+    private var isModelAvailable: Bool {
+        if case .available = model.availability {
+            return true
+        }
+        return false
     }
 
     
@@ -403,31 +427,43 @@ struct ItemDetailView: View {
                         .font(Theme.Fonts.cosyHeadline())
                         .foregroundColor(Theme.Colors.cocoaBrown)
                     Spacer()
-                    Text("\(manualSections.count) pages")
-                        .font(Theme.Fonts.cosyCaption())
-                        .foregroundColor(Theme.Colors.softGray)
-                }
-
-                Button(action: {
-                    pdfToShow = PDFViewerData(
-                        pdfPath: manualPath,
-                        pageNumber: 1,
-                        itemName: item.name
-                    )
-                }) {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Image(systemName: "book.fill")
-                        Text("Open Manual")
+                    if !isModelAvailable {
+                        Button(action: { showingManualInfo = true }) {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(Theme.Colors.softGray)
+                        }
+                        .buttonStyle(.plain)
+                        .popover(isPresented: $showingManualInfo) {
+                            Text("Appendix requires Apple Intelligence. Open the manual to browse pages.")
+                                .font(Theme.Fonts.cosyCaption())
+                                .foregroundColor(Theme.Colors.cocoaBrown)
+                                .padding(Theme.Spacing.small)
+                        }
                     }
-                    .font(Theme.Fonts.cosyBody())
-                    .foregroundColor(Theme.Colors.cocoaBrown)
-                    .padding(.horizontal, Theme.Spacing.small)
-                    .padding(.vertical, Theme.Spacing.xs)
                 }
-                .cosyButtonPress()
 
-                if !manualSections.isEmpty {
-                    AppendixListView(sections: manualSections, openManual: openManual)
+                if isModelAvailable {
+                    if !manualEntries.isEmpty {
+                        AppendixListView(entries: manualEntries, openManual: openManual)
+                    }
+                } else {
+                    Button(action: {
+                        pdfToShow = PDFViewerData(
+                            pdfPath: manualPath,
+                            pageNumber: 1,
+                            itemName: item.name
+                        )
+                    }) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Image(systemName: "book.fill")
+                            Text("Open Manual")
+                        }
+                        .font(Theme.Fonts.cosyBody())
+                        .foregroundColor(Theme.Colors.cocoaBrown)
+                        .padding(.horizontal, Theme.Spacing.small)
+                        .padding(.vertical, Theme.Spacing.xs)
+                    }
+                    .cosyButtonPress()
                 }
             }
             .padding(.vertical, Theme.Spacing.small)
@@ -436,13 +472,13 @@ struct ItemDetailView: View {
 }
 
 struct AppendixListView: View {
-    let sections: [ManualSection]
+    let entries: [AppendixEntry]
     let openManual: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            ForEach(sections.sorted(by: { ($0.pageNumbers.first ?? 0) < ($1.pageNumbers.first ?? 0) })) { section in
-                AppendixEntryView(section: section, openManual: openManual)
+            ForEach(entries.sorted(by: { $0.pageNumber < $1.pageNumber })) { entry in
+                AppendixEntryView(entry: entry, openManual: openManual)
             }
         }
         .padding(.vertical, Theme.Spacing.small)
@@ -450,27 +486,27 @@ struct AppendixListView: View {
 }
 
 struct AppendixEntryView: View {
-    let section: ManualSection
+    let entry: AppendixEntry
     let openManual: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            if let pageNumber = section.pageNumbers.first {
-                Button(action: { openManual(pageNumber) }) {
-                    Text(section.displayHeading)
-                        .font(Theme.Fonts.cosySubheadline())
-                        .foregroundColor(Theme.Colors.mutedPlum)
-                        .underline()
-                }
-                .cosyButtonPress()
-            } else {
-                Text(section.displayHeading)
+            Button(action: { openManual(entry.pageNumber) }) {
+                Text(entry.heading)
                     .font(Theme.Fonts.cosySubheadline())
                     .foregroundColor(Theme.Colors.mutedPlum)
+                    .underline()
             }
+            .cosyButtonPress()
         }
         .padding(.vertical, Theme.Spacing.xxs)
     }
+}
+
+struct AppendixEntry: Identifiable {
+    let id: UUID
+    let heading: String
+    let pageNumber: Int
 }
 
 struct DetailRowValue: View {
