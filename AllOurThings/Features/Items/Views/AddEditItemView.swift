@@ -10,6 +10,7 @@ struct AddEditItemView: View {
     @State private var name = ""
     @State private var manufacturer = ""
     @State private var modelNumber = ""
+    @State private var serialNumber = ""
     @State private var categorySelection = ""
     @State private var customCategory = ""
     @State private var notes = ""
@@ -34,7 +35,9 @@ struct AddEditItemView: View {
     @State private var imageData: Data?
     @State private var imageFileName: String?
     @State private var imageFilePath: String?
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var photoFilePaths: [String] = []
+    @State private var leadPhotoPath: String?
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var isSavingImage = false
     @State private var imageError: String?
     @State private var showingCamera = false
@@ -84,6 +87,7 @@ struct AddEditItemView: View {
             _name = State(initialValue: item.name)
             _manufacturer = State(initialValue: item.manufacturer)
             _modelNumber = State(initialValue: item.modelNumber)
+            _serialNumber = State(initialValue: item.serialNumber)
             _notes = State(initialValue: item.notes)
             _purchaseDate = State(initialValue: item.purchaseDate)
             _warrantyExpirationDate = State(initialValue: item.warrantyExpirationDate)
@@ -93,6 +97,12 @@ struct AddEditItemView: View {
             _imageData = State(initialValue: item.imageData)
             _imageFileName = State(initialValue: item.imageFileName)
             _imageFilePath = State(initialValue: item.imageFilePath)
+            var paths = item.photoFilePaths
+            if paths.isEmpty, let legacyPath = item.imageFilePath, !legacyPath.isEmpty {
+                paths.append(legacyPath)
+            }
+            _photoFilePaths = State(initialValue: paths)
+            _leadPhotoPath = State(initialValue: item.leadPhotoPath ?? paths.first)
             if categoryOptions.contains(item.category) {
                 _categorySelection = State(initialValue: item.category)
                 _customCategory = State(initialValue: "")
@@ -119,14 +129,14 @@ struct AddEditItemView: View {
 
                         VStack(spacing: Theme.Spacing.small) {
                             // Name field (required)
-                            RequiredFieldView(label: "Name", placeholder: "Enter item name", text: $name)
+                            RequiredFieldView(label: "Name", placeholder: "Item name", text: $name)
 
                             // Model field (optional)
                             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                                 Text("Model")
                                     .font(Theme.Fonts.cosySubheadline())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
-                                CozyTextField(placeholder: "Enter model (optional)", text: $modelNumber)
+                                CozyTextField(placeholder: "Model name", text: $modelNumber)
                             }
 
                             // Category field (required)
@@ -163,7 +173,7 @@ struct AddEditItemView: View {
                                 Text("Manufacturer")
                                     .font(Theme.Fonts.cosySubheadline())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
-                                CozyTextField(placeholder: "Enter manufacturer name (optional)", text: $manufacturer)
+                                CozyTextField(placeholder: "Manufacturer name", text: $manufacturer)
                             }
 
                             // Serial Number field (optional)
@@ -171,7 +181,7 @@ struct AddEditItemView: View {
                                 Text("Serial Number")
                                     .font(Theme.Fonts.cosySubheadline())
                                     .foregroundColor(Theme.Colors.cocoaBrown)
-                                CozyTextField(placeholder: "Enter serial number (optional)", text: $modelNumber)
+                                CozyTextField(placeholder: "Serial number", text: $serialNumber)
                             }
 
                         }
@@ -350,8 +360,51 @@ struct AddEditItemView: View {
 
                         VStack(spacing: Theme.Spacing.xs) {
                             // Show image preview if available
-                            if let imageData = imageData,
-                               let uiImage = UIImage(data: imageData) {
+                            if !photoFilePaths.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: Theme.Spacing.small) {
+                                        ForEach(photoFilePaths, id: \.self) { path in
+                                            if let uiImage = loadImage(path: path) {
+                                                ZStack(alignment: .topTrailing) {
+                                                    Image(uiImage: uiImage)
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                        .frame(width: 120, height: 120)
+                                                        .clipped()
+                                                        .cornerRadius(Theme.CornerRadius.medium)
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                                                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
+                                                        )
+
+                                                    VStack(spacing: 6) {
+                                                        Button(action: { removePhoto(path: path) }) {
+                                                            Image(systemName: "xmark.circle.fill")
+                                                                .foregroundColor(Theme.Colors.peach)
+                                                                .background(
+                                                                    Circle()
+                                                                        .fill(Theme.Colors.cloudWhite)
+                                                                )
+                                                        }
+
+                                                        Button(action: { setLeadPhoto(path: path) }) {
+                                                            Image(systemName: leadPhotoPath == path ? "star.fill" : "star")
+                                                                .foregroundColor(Theme.Colors.butterYellow)
+                                                                .background(
+                                                                    Circle()
+                                                                        .fill(Theme.Colors.cloudWhite)
+                                                                )
+                                                        }
+                                                    }
+                                                    .padding(6)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, Theme.Spacing.small)
+                                }
+                            } else if let imageData = imageData,
+                                      let uiImage = UIImage(data: imageData) {
                                 VStack(spacing: Theme.Spacing.xs) {
                                     Image(uiImage: uiImage)
                                         .resizable()
@@ -434,7 +487,7 @@ struct AddEditItemView: View {
                                     }
 
                                     // PhotosPicker button
-                                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                    PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images) {
                                         HStack {
                                             Image(systemName: "photo.on.rectangle")
                                             Text("Choose Photo")
@@ -450,9 +503,9 @@ struct AddEditItemView: View {
                                                 .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
                                         )
                                     }
-                                    .onChange(of: selectedPhotoItem) { _, newItem in
+                                    .onChange(of: selectedPhotoItems) { _, newItems in
                                         Task {
-                                            await handlePhotoSelection(newItem)
+                                            await handlePhotoSelection(newItems)
                                         }
                                     }
                                 }
@@ -605,43 +658,40 @@ struct AddEditItemView: View {
         }
 
         await MainActor.run {
-            // Delete old image if replacing
-            if let oldPath = imageFilePath {
-                ImageStorageHelper.shared.deleteImage(at: oldPath)
+            photoFilePaths.append(savedPath)
+            if leadPhotoPath == nil {
+                leadPhotoPath = savedPath
             }
-
-            // Update state
-            self.imageData = imageData
-            self.imageFileName = fileName
-            self.imageFilePath = savedPath
             isSavingImage = false
         }
     }
 
-    private func handlePhotoSelection(_ photoItem: PhotosPickerItem?) async {
-        guard let photoItem = photoItem else { return }
+    private func handlePhotoSelection(_ photoItems: [PhotosPickerItem]) async {
+        guard !photoItems.isEmpty else { return }
 
-        do {
-            // Load image data from PhotosPickerItem
-            guard let loadedImageData = try await photoItem.loadTransferable(type: Data.self) else {
+        for item in photoItems {
+            do {
+                guard let loadedImageData = try await item.loadTransferable(type: Data.self) else {
+                    await MainActor.run {
+                        imageError = "Failed to load image"
+                        isSavingImage = false
+                    }
+                    continue
+                }
+
+                await processImageData(loadedImageData, fileName: Constants.FileNames.photoFileName())
+            } catch {
                 await MainActor.run {
-                    imageError = "Failed to load image"
+                    imageError = "An unexpected error occurred"
                     isSavingImage = false
                 }
-                return
             }
+        }
 
-            await processImageData(loadedImageData, fileName: Constants.FileNames.photoFileName())
-
-            await MainActor.run {
-                selectedPhotoItem = nil
-            }
-
-        } catch {
-            await MainActor.run {
-                imageError = "An unexpected error occurred"
-                isSavingImage = false
-                selectedPhotoItem = nil
+        await MainActor.run {
+            selectedPhotoItems = []
+            if leadPhotoPath == nil, let first = photoFilePaths.first {
+                leadPhotoPath = first
             }
         }
     }
@@ -656,6 +706,26 @@ struct AddEditItemView: View {
         imageFileName = nil
         imageFilePath = nil
         imageError = nil
+    }
+
+    private func removePhoto(path: String) {
+        ImageStorageHelper.shared.deleteImage(at: path)
+        photoFilePaths.removeAll { $0 == path }
+        if leadPhotoPath == path {
+            leadPhotoPath = photoFilePaths.first
+        }
+    }
+
+    private func loadImage(path: String) -> UIImage? {
+        guard let url = ImageStorageHelper.shared.getImageURL(for: path),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return UIImage(data: data)
+    }
+
+    private func setLeadPhoto(path: String) {
+        leadPhotoPath = path
     }
 
     private func handleCameraCapture(_ image: UIImage) {
@@ -684,6 +754,7 @@ struct AddEditItemView: View {
             item.name = name
             item.manufacturer = manufacturer
             item.modelNumber = modelNumber
+            item.serialNumber = serialNumber
             item.category = resolvedCategory
             item.notes = notes
             item.purchaseDate = purchaseDate
@@ -694,6 +765,8 @@ struct AddEditItemView: View {
             item.imageData = imageData
             item.imageFileName = imageFileName
             item.imageFilePath = imageFilePath
+            item.photoFilePaths = photoFilePaths
+            item.leadPhotoPath = leadPhotoPath
 
             savedItem = item
 
@@ -707,6 +780,7 @@ struct AddEditItemView: View {
                 name: name,
                 manufacturer: manufacturer,
                 modelNumber: modelNumber,
+                serialNumber: serialNumber,
                 category: resolvedCategory,
                 purchaseDate: purchaseDate,
                 warrantyExpirationDate: warrantyExpirationDate,
@@ -716,7 +790,9 @@ struct AddEditItemView: View {
                 manualFilePath: manualFilePath,
                 imageData: imageData,
                 imageFileName: imageFileName,
-                imageFilePath: imageFilePath
+                imageFilePath: imageFilePath,
+                photoFilePaths: photoFilePaths,
+                leadPhotoPath: leadPhotoPath
             )
             modelContext.insert(newItem)
             savedItem = newItem

@@ -16,6 +16,7 @@ final class Item {
     var name: String
     var manufacturer: String
     var modelNumber: String
+    var serialNumber: String
     var category: String
     var purchaseDate: Date?
     var warrantyExpirationDate: Date?
@@ -32,12 +33,15 @@ final class Item {
     var imageData: Data?
     var imageFileName: String?
     var imageFilePath: String?
+    var photoFilePaths: [String]
+    var leadPhotoPath: String?
 
-    init(name: String, manufacturer: String = "", modelNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, imageData: Data? = nil, imageFileName: String? = nil, imageFilePath: String? = nil) {
+    init(name: String, manufacturer: String = "", modelNumber: String = "", serialNumber: String = "", category: String = "", purchaseDate: Date? = nil, warrantyExpirationDate: Date? = nil, location: String = "", notes: String = "", manualText: String? = nil, manualFileName: String? = nil, manualFilePath: String? = nil, imageData: Data? = nil, imageFileName: String? = nil, imageFilePath: String? = nil, photoFilePaths: [String] = [], leadPhotoPath: String? = nil) {
         self.id = UUID()
         self.name = name
         self.manufacturer = manufacturer
         self.modelNumber = modelNumber
+        self.serialNumber = serialNumber
         self.category = category
         self.purchaseDate = purchaseDate
         self.warrantyExpirationDate = warrantyExpirationDate
@@ -49,6 +53,8 @@ final class Item {
         self.imageData = imageData
         self.imageFileName = imageFileName
         self.imageFilePath = imageFilePath
+        self.photoFilePaths = photoFilePaths
+        self.leadPhotoPath = leadPhotoPath
         self.timestamp = Date()
     }
 }

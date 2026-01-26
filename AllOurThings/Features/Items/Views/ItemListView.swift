@@ -164,8 +164,7 @@ struct ItemRowView: View {
         VStack(spacing: 0) {
             // Image Section (or placeholder)
             ZStack {
-                if let imageData = item.imageData,
-                   let uiImage = UIImage(data: imageData) {
+                if let uiImage = loadPrimaryImage() {
                     // Show image
                     Image(uiImage: uiImage)
                         .resizable()
@@ -214,6 +213,32 @@ struct ItemRowView: View {
             RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
                 .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
         )
+    }
+
+    private func loadPrimaryImage() -> UIImage? {
+        if let leadPath = item.leadPhotoPath,
+           let url = ImageStorageHelper.shared.getImageURL(for: leadPath),
+           let data = try? Data(contentsOf: url),
+           let image = UIImage(data: data) {
+            return image
+        }
+        if let path = item.photoFilePaths.first,
+           let url = ImageStorageHelper.shared.getImageURL(for: path),
+           let data = try? Data(contentsOf: url),
+           let image = UIImage(data: data) {
+            return image
+        }
+        if let imagePath = item.imageFilePath,
+           let url = ImageStorageHelper.shared.getImageURL(for: imagePath),
+           let data = try? Data(contentsOf: url),
+           let image = UIImage(data: data) {
+            return image
+        }
+        if let imageData = item.imageData,
+           let image = UIImage(data: imageData) {
+            return image
+        }
+        return nil
     }
 }
 
@@ -325,7 +350,8 @@ struct ItemDetailView: View {
     private var basicInformationSection: some View {
         if !item.category.isEmpty ||
             !item.manufacturer.isEmpty ||
-            !item.modelNumber.isEmpty {
+            !item.modelNumber.isEmpty ||
+            !item.serialNumber.isEmpty {
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 Text("Basic Information")
                     .font(Theme.Fonts.cosyHeadline())
@@ -340,6 +366,9 @@ struct ItemDetailView: View {
                     }
                     if !item.modelNumber.isEmpty {
                         DetailRowValue(title: "Model Number", value: item.modelNumber)
+                    }
+                    if !item.serialNumber.isEmpty {
+                        DetailRowValue(title: "Serial Number", value: item.serialNumber)
                     }
                 }
             }
@@ -376,20 +405,46 @@ struct ItemDetailView: View {
 
     @ViewBuilder
     private var photoSection: some View {
-        if let imageData = item.imageData,
-           let uiImage = UIImage(data: imageData) {
+        let paths = !item.photoFilePaths.isEmpty ? item.photoFilePaths : (item.imageFilePath.map { [$0] } ?? [])
+        if !paths.isEmpty || item.imageData != nil {
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 Text("Photo")
                     .font(Theme.Fonts.cosyHeadline())
                     .foregroundColor(Theme.Colors.cocoaBrown)
 
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity)
+                if !paths.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Theme.Spacing.small) {
+                            ForEach(paths, id: \.self) { path in
+                                if let uiImage = loadImage(path: path) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 160, height: 160)
+                                        .clipped()
+                                        .cornerRadius(Theme.CornerRadius.medium)
+                                }
+                            }
+                        }
+                    }
+                } else if let imageData = item.imageData,
+                          let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                }
             }
             .padding(.vertical, Theme.Spacing.small)
         }
+    }
+
+    private func loadImage(path: String) -> UIImage? {
+        guard let url = ImageStorageHelper.shared.getImageURL(for: path),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return UIImage(data: data)
     }
 
     @ViewBuilder
