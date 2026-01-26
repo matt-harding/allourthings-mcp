@@ -12,7 +12,6 @@ struct AddEditItemView: View {
     @State private var modelNumber = ""
     @State private var categorySelection = ""
     @State private var customCategory = ""
-    @State private var location = ""
     @State private var notes = ""
     @State private var purchaseDate: Date?
     @State private var warrantyExpirationDate: Date?
@@ -75,7 +74,6 @@ struct AddEditItemView: View {
 
     var isSaveDisabled: Bool {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
         resolvedCategory.isEmpty ||
         isProcessingPDF
     }
@@ -86,7 +84,6 @@ struct AddEditItemView: View {
             _name = State(initialValue: item.name)
             _manufacturer = State(initialValue: item.manufacturer)
             _modelNumber = State(initialValue: item.modelNumber)
-            _location = State(initialValue: item.location)
             _notes = State(initialValue: item.notes)
             _purchaseDate = State(initialValue: item.purchaseDate)
             _warrantyExpirationDate = State(initialValue: item.warrantyExpirationDate)
@@ -124,6 +121,14 @@ struct AddEditItemView: View {
                             // Name field (required)
                             RequiredFieldView(label: "Name", placeholder: "Enter item name", text: $name)
 
+                            // Model field (optional)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                Text("Model")
+                                    .font(Theme.Fonts.cosySubheadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                CozyTextField(placeholder: "Enter model (optional)", text: $modelNumber)
+                            }
+
                             // Category field (required)
                             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                                 Text("Category")
@@ -153,8 +158,13 @@ struct AddEditItemView: View {
                                 }
                             }
 
-                            // Manufacturer field (required)
-                            RequiredFieldView(label: "Manufacturer", placeholder: "Enter manufacturer name", text: $manufacturer)
+                            // Manufacturer field (optional)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                Text("Manufacturer")
+                                    .font(Theme.Fonts.cosySubheadline())
+                                    .foregroundColor(Theme.Colors.cocoaBrown)
+                                CozyTextField(placeholder: "Enter manufacturer name (optional)", text: $manufacturer)
+                            }
 
                             // Serial Number field (optional)
                             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
@@ -164,13 +174,6 @@ struct AddEditItemView: View {
                                 CozyTextField(placeholder: "Enter serial number (optional)", text: $modelNumber)
                             }
 
-                            // Location field (optional)
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                Text("Location")
-                                    .font(Theme.Fonts.cosySubheadline())
-                                    .foregroundColor(Theme.Colors.cocoaBrown)
-                                CozyTextField(placeholder: "Where is this item stored?", text: $location)
-                            }
                         }
                         .cosyCard(padding: Theme.Spacing.medium)
                     }
@@ -682,7 +685,6 @@ struct AddEditItemView: View {
             item.manufacturer = manufacturer
             item.modelNumber = modelNumber
             item.category = resolvedCategory
-            item.location = location
             item.notes = notes
             item.purchaseDate = purchaseDate
             item.warrantyExpirationDate = warrantyExpirationDate
@@ -708,7 +710,6 @@ struct AddEditItemView: View {
                 category: resolvedCategory,
                 purchaseDate: purchaseDate,
                 warrantyExpirationDate: warrantyExpirationDate,
-                location: location,
                 notes: notes,
                 manualText: manualText,
                 manualFileName: manualFileName,

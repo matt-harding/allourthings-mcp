@@ -325,8 +325,7 @@ struct ItemDetailView: View {
     private var basicInformationSection: some View {
         if !item.category.isEmpty ||
             !item.manufacturer.isEmpty ||
-            !item.modelNumber.isEmpty ||
-            !item.location.isEmpty {
+            !item.modelNumber.isEmpty {
             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                 Text("Basic Information")
                     .font(Theme.Fonts.cosyHeadline())
@@ -341,9 +340,6 @@ struct ItemDetailView: View {
                     }
                     if !item.modelNumber.isEmpty {
                         DetailRowValue(title: "Model Number", value: item.modelNumber)
-                    }
-                    if !item.location.isEmpty {
-                        DetailRowValue(title: "Location", value: item.location)
                     }
                 }
             }
