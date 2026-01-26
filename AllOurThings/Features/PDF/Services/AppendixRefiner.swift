@@ -19,7 +19,11 @@ final class AppendixRefiner {
         let heading: String
     }
 
-    func refineAppendix(_ sections: [SectionData], model: SystemLanguageModel) async -> [SectionData] {
+    func refineAppendix(
+        _ sections: [SectionData],
+        model: SystemLanguageModel,
+        onProgress: ((Double) -> Void)? = nil
+    ) async -> [SectionData] {
         guard case .available = model.availability else {
             logger.warning("⚠️ [AppendixRefiner] Model not available, skipping refinement")
             return sections
@@ -62,13 +66,17 @@ final class AppendixRefiner {
         var refinedEntries: [RefinedEntry] = []
         refinedEntries.reserveCapacity(drafts.count)
 
-        for batch in drafts.chunked(into: batchSize) {
+        let batches = drafts.chunked(into: batchSize)
+        for (index, batch) in batches.enumerated() {
             if let refined = await refineBatch(batch, instructions: instructions) {
                 refinedEntries.append(contentsOf: refined)
             } else {
                 // Fallback: keep originals for this batch
                 refinedEntries.append(contentsOf: batch.map { RefinedEntry(pageNumber: $0.pageNumber, heading: $0.heading) })
             }
+
+            let progress = Double(index + 1) / Double(max(1, batches.count))
+            onProgress?(progress)
         }
 
         if refinedEntries.isEmpty {

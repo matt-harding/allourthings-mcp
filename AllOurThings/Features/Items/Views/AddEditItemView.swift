@@ -600,7 +600,13 @@ struct AddEditItemView: View {
             let model = SystemLanguageModel()
             let sections = await AppendixRefiner.shared.refineAppendix(
                 rawSections,
-                model: model
+                model: model,
+                onProgress: { progress in
+                    Task { @MainActor in
+                        let percent = Int(progress * 100)
+                        pdfProcessingStage = "Refining appendix (\(percent)%)"
+                    }
+                }
             )
 
             await MainActor.run {
