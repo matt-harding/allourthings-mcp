@@ -292,12 +292,6 @@ struct AddEditItemView: View {
                                 .background(Theme.Colors.mintGreen.opacity(0.1))
                                 .cornerRadius(Theme.CornerRadius.medium)
 
-                                if let stats = pdfStats {
-                                    Text(stats.summary)
-                                        .font(Theme.Fonts.cosyCaption())
-                                        .foregroundColor(Theme.Colors.softGray)
-                                        .padding(.horizontal, Theme.Spacing.small)
-                                }
                             }
 
                             // Show error if PDF processing failed
@@ -479,13 +473,9 @@ struct AddEditItemView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { saveItem() }) {
                         if isEditing {
-                            Text("Save")
-                                .font(Theme.Fonts.cosyButton())
-                                .foregroundColor(isSaveDisabled ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
-                                .padding(.horizontal, Theme.Spacing.small)
-                                .padding(.vertical, Theme.Spacing.xs)
-                                .background(isSaveDisabled ? Theme.Colors.softGray.opacity(0.3) : Theme.Colors.mintGreen)
-                                .cornerRadius(Theme.CornerRadius.xl)
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(isSaveDisabled ? Theme.Colors.softGray : Theme.Colors.mintGreen)
                         } else {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 24))

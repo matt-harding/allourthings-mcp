@@ -183,23 +183,6 @@ struct ItemRowView: View {
                         .foregroundColor(Theme.Colors.categoryColor(for: item.category).opacity(0.4))
                 }
 
-                // Badge in corner showing location
-                VStack {
-                    HStack {
-                        Spacer()
-                        if !item.location.isEmpty {
-                            Text(item.location)
-                                .font(Theme.Fonts.cosyCaption())
-                                .foregroundColor(Theme.Colors.cocoaBrown)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Theme.Colors.softLavender.opacity(0.9))
-                                .cornerRadius(Theme.CornerRadius.small)
-                                .padding(Theme.Spacing.xxs)
-                        }
-                    }
-                    Spacer()
-                }
             }
             .frame(height: 120)
             .frame(maxWidth: .infinity)
@@ -243,13 +226,11 @@ struct ItemDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.large) {
-                headerSection
                 basicInformationSection
                 datesSection
                 photoSection
                 notesSection
                 manualSection
-                appendixSection
 
                 Spacer()
             }
@@ -317,21 +298,6 @@ struct ItemDetailView: View {
     
 
     @ViewBuilder
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(item.name)
-                .font(Theme.Fonts.cosyExtraLargeTitle())
-                .foregroundColor(Theme.Colors.cocoaBrown)
-
-            if !item.category.isEmpty {
-                Text(item.category)
-                    .font(Theme.Fonts.cosyLargeTitle())
-                    .foregroundColor(Theme.Colors.categoryColor(for: item.category))
-            }
-        }
-    }
-
-    @ViewBuilder
     private var basicInformationSection: some View {
         if !item.category.isEmpty ||
             !item.manufacturer.isEmpty ||
@@ -357,7 +323,7 @@ struct ItemDetailView: View {
                     }
                 }
             }
-            .cosyCard(padding: Theme.Spacing.medium)
+            .padding(.vertical, Theme.Spacing.small)
         }
     }
 
@@ -384,7 +350,7 @@ struct ItemDetailView: View {
                     }
                 }
             }
-            .cosyCard(padding: Theme.Spacing.medium)
+            .padding(.vertical, Theme.Spacing.small)
         }
     }
 
@@ -401,14 +367,8 @@ struct ItemDetailView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity)
-                    .cornerRadius(Theme.CornerRadius.large)
-                    .shadow(color: Theme.Colors.shadowTint.opacity(0.3), radius: 0, x: 3, y: 3)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                            .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.thick)
-                    )
             }
-            .cosyCard(padding: Theme.Spacing.medium)
+            .padding(.vertical, Theme.Spacing.small)
         }
     }
 
@@ -428,14 +388,7 @@ struct ItemDetailView: View {
                     .font(Theme.Fonts.cosyBody())
                     .foregroundColor(Theme.Colors.cocoaBrown)
             }
-            .padding(Theme.Spacing.medium)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.Colors.butterYellow.opacity(0.2))
-            .cornerRadius(Theme.CornerRadius.medium)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                    .stroke(Theme.Colors.butterYellow, lineWidth: Theme.BorderWidth.thick)
-            )
+            .padding(.vertical, Theme.Spacing.small)
         }
     }
 
@@ -455,13 +408,6 @@ struct ItemDetailView: View {
                         .foregroundColor(Theme.Colors.softGray)
                 }
 
-                if let manualName = item.manualFileName, !manualName.isEmpty {
-                    Text(manualName)
-                        .font(Theme.Fonts.cosyBody())
-                        .foregroundColor(Theme.Colors.cocoaBrown)
-                        .lineLimit(2)
-                }
-
                 Button(action: {
                     pdfToShow = PDFViewerData(
                         pdfPath: manualPath,
@@ -477,60 +423,29 @@ struct ItemDetailView: View {
                     .foregroundColor(Theme.Colors.cocoaBrown)
                     .padding(.horizontal, Theme.Spacing.small)
                     .padding(.vertical, Theme.Spacing.xs)
-                    .background(Theme.Colors.warmCream)
-                    .cornerRadius(Theme.CornerRadius.medium)
                 }
                 .cosyButtonPress()
-            }
-            .padding(Theme.Spacing.medium)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.Colors.peach.opacity(0.15))
-            .cornerRadius(Theme.CornerRadius.medium)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                    .stroke(Theme.Colors.peach, lineWidth: Theme.BorderWidth.thick)
-            )
-        }
-    }
 
-    @ViewBuilder
-    private var appendixSection: some View {
-        if !manualSections.isEmpty {
-            AppendixSectionView(sections: manualSections, openManual: openManual)
+                if !manualSections.isEmpty {
+                    AppendixListView(sections: manualSections, openManual: openManual)
+                }
+            }
+            .padding(.vertical, Theme.Spacing.small)
         }
     }
 }
 
-struct AppendixSectionView: View {
+struct AppendixListView: View {
     let sections: [ManualSection]
     let openManual: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            HStack(spacing: Theme.Spacing.xs) {
-                Image(systemName: "list.bullet.rectangle")
-                    .foregroundColor(Theme.Colors.softLavender)
-                Text("Appendix")
-                    .font(Theme.Fonts.cosyHeadline())
-                    .foregroundColor(Theme.Colors.cocoaBrown)
-                Spacer()
-                Text("\(sections.count) pages")
-                    .font(Theme.Fonts.cosyCaption())
-                    .foregroundColor(Theme.Colors.softGray)
-            }
-
             ForEach(sections.sorted(by: { ($0.pageNumbers.first ?? 0) < ($1.pageNumbers.first ?? 0) })) { section in
                 AppendixEntryView(section: section, openManual: openManual)
             }
         }
-        .padding(Theme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.softLavender.opacity(0.15))
-        .cornerRadius(Theme.CornerRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                .stroke(Theme.Colors.softLavender, lineWidth: Theme.BorderWidth.thick)
-        )
+        .padding(.vertical, Theme.Spacing.small)
     }
 }
 
@@ -540,30 +455,21 @@ struct AppendixEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(section.displayHeading)
-                .font(Theme.Fonts.cosySubheadline())
-                .foregroundColor(Theme.Colors.mutedPlum)
-
             if let pageNumber = section.pageNumbers.first {
                 Button(action: { openManual(pageNumber) }) {
-                    Text("Page \(pageNumber)")
-                        .font(Theme.Fonts.cosyCaption())
-                        .foregroundColor(Theme.Colors.cocoaBrown)
-                        .padding(.horizontal, Theme.Spacing.xs)
-                        .padding(.vertical, Theme.Spacing.xxs)
-                        .background(Theme.Colors.warmCream)
-                        .cornerRadius(Theme.CornerRadius.small)
+                    Text(section.displayHeading)
+                        .font(Theme.Fonts.cosySubheadline())
+                        .foregroundColor(Theme.Colors.mutedPlum)
+                        .underline()
                 }
                 .cosyButtonPress()
+            } else {
+                Text(section.displayHeading)
+                    .font(Theme.Fonts.cosySubheadline())
+                    .foregroundColor(Theme.Colors.mutedPlum)
             }
         }
-        .padding(Theme.Spacing.small)
-        .background(Theme.Colors.warmCream.opacity(0.6))
-        .cornerRadius(Theme.CornerRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                .stroke(Theme.Colors.gentleBorder, lineWidth: Theme.BorderWidth.standard)
-        )
+        .padding(.vertical, Theme.Spacing.xxs)
     }
 }
 
@@ -581,9 +487,6 @@ struct DetailRowValue: View {
                 .font(Theme.Fonts.cosyBody())
                 .foregroundColor(value.isEmpty ? Theme.Colors.softGray : Theme.Colors.cocoaBrown)
         }
-        .padding(Theme.Spacing.small)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.warmCream.opacity(0.5))
-        .cornerRadius(Theme.CornerRadius.small)
+        .padding(.vertical, Theme.Spacing.xxs)
     }
 }
