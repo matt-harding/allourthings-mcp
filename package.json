@@ -1,0 +1,7 @@
+{
+  "name": "alloutthings",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}
