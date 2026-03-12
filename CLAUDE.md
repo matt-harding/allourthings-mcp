@@ -98,9 +98,10 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 | 3 — Notion Backend | 2 | Not started |
 | 4 — MCP App UIs | 3 | Not started (Browse UI, Dashboard UI) |
 | 5 — Advanced Tools | 3 | Not started (get_spending, search_manuals, prompts) |
-| 6 — iOS App | 4 | **Removed from codebase** (commit: "Remove iOS/Swift app, keep MCP server only") — backlog items may need archiving |
+| 6 — iOS App | 4 | Reinstated — SwiftUI app for adding/editing inventory. iOS first. |
 | 7 — Website & Marketing | 2 | Not started (allourthings.io Astro site, docs) |
 | 8 — Monetisation | 5 | Not started (license keys via LemonSqueezy/Gumroad, £9–15 one-time) |
+| 9 — Android App | 5 | Not started — follows iOS (Epic 6). Kotlin/Compose. |
 
 ### Upcoming priorities (Phase 1 remaining)
 
@@ -126,6 +127,6 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 
 ## Open questions / decisions needed
 
-- iOS App (Epic 6): still in backlog but removed from codebase — confirm whether to archive or defer
+- iOS App (Epic 6): reinstated. Android (Epic 9) follows after iOS ships.
 - `search_manuals` tool assumes manuals are attached to items (`manual_ref` field) — no story yet for how users attach/upload manuals
 - `deleteItem` is hard-delete in current implementation despite backlog note suggesting soft-delete

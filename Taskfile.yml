@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   SERVER: packages/mcp-server
+  WEBSITE: packages/website
   # Default catalog path for local dev/testing.
   # Override: CATALOG_PATH=/your/path task <command>
   CATALOG: "{{.CATALOG_PATH | default \"./catalog.json\"}}"
@@ -16,6 +17,16 @@ tasks:
     env:
       CATALOG_PATH: "{{.CATALOG}}"
     cmd: bun run dev
+
+  website:dev:
+    desc: Start website dev server
+    dir: "{{.WEBSITE}}"
+    cmd: bun run dev
+
+  website:build:
+    desc: Build website for production
+    dir: "{{.WEBSITE}}"
+    cmd: bun run build
 
   build:
     desc: Compile MCP server to dist/
