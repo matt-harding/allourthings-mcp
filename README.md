@@ -4,11 +4,14 @@
 
 A monorepo for the All Our Things household inventory system. Ask your AI assistant natural language questions about everything you own — appliances, furniture, subscriptions, warranties, and more.
 
+**Website:** [allourthings.io](https://allourthings.io)
+
 ## Packages
 
 | Package | Description |
 |---|---|
 | [`packages/mcp-server`](./packages/mcp-server) | TypeScript MCP server — the core of the system |
+| [`packages/website`](./packages/website) | Astro static site — allourthings.io |
 
 ---
 
@@ -46,6 +49,7 @@ Every item has a small set of required fields (`id`, `name`, `created_at`, `upda
 ### Prerequisites
 
 - [Bun](https://bun.sh) — `brew install bun`
+- [Task](https://taskfile.dev) — `brew install go-task`
 
 ### Install dependencies
 
@@ -56,26 +60,21 @@ bun install
 ### Run in dev mode
 
 ```bash
-cd packages/mcp-server
-bun run dev
+task dev           # MCP server in watch mode
+task website:dev   # Website dev server
 ```
-
-This starts the server over stdio with watch mode. You won't see any output until an MCP client connects.
 
 ### Build
 
 ```bash
-cd packages/mcp-server
-bun run build
+task build         # Compile MCP server to dist/
+task website:build # Build website to packages/website/dist/
 ```
-
-Compiled output goes to `packages/mcp-server/dist/`.
 
 ### Typecheck
 
 ```bash
-cd packages/mcp-server
-bun run typecheck
+task typecheck
 ```
 
 ---
@@ -83,8 +82,6 @@ bun run typecheck
 ## Testing
 
 ### Quick start with Task
-
-Install [Task](https://taskfile.dev) (`brew install go-task`), then:
 
 ```bash
 # Seed test data + open MCP Inspector in one step
@@ -106,19 +103,14 @@ Available tasks:
 | `task seed:reset` | Clear catalog and re-seed |
 | `task inspect` | MCP Inspector in dev mode |
 | `task inspect:prod` | Build, then MCP Inspector against dist |
-| `task dev` | Start server in watch mode (for connecting a real AI client) |
-| `task build` | Compile to dist/ |
+| `task dev` | Start MCP server in watch mode |
+| `task build` | Compile MCP server to dist/ |
 | `task typecheck` | Run TypeScript type checking |
 | `task clean` | Remove dist/ |
 | `task clean:catalog` | Delete local dev catalog |
-
-### Manual — MCP Inspector only
-
-The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) opens a browser UI where you can call each tool directly and inspect responses:
-
-```bash
-npx @modelcontextprotocol/inspector bun packages/mcp-server/src/index.ts
-```
+| `task website:dev` | Start website dev server |
+| `task website:build` | Build website for production |
+| `task website:deploy` | Build and deploy website to Cloudflare Pages |
 
 ---
 
@@ -129,7 +121,7 @@ Add the following to your Claude Desktop config (`~/Library/Application Support/
 ```json
 {
   "mcpServers": {
-    "alloutthings": {
+    "allourthings": {
       "command": "bun",
       "args": ["/path/to/AllOurThings/packages/mcp-server/dist/index.js"]
     }
@@ -142,7 +134,7 @@ Or in dev mode (no build step required):
 ```json
 {
   "mcpServers": {
-    "alloutthings": {
+    "allourthings": {
       "command": "bun",
       "args": ["/path/to/AllOurThings/packages/mcp-server/src/index.ts"]
     }

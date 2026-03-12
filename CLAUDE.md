@@ -6,7 +6,7 @@ AI-powered household inventory system. Users ask natural language questions abou
 
 ```
 packages/
-  mcp-server/       # TypeScript MCP server — the only package right now
+  mcp-server/       # TypeScript MCP server — the core of the system
     src/
       index.ts      # Entrypoint — wires backend + transport
       server.ts     # MCP server, tool registry, request handlers
@@ -21,6 +21,10 @@ packages/
         update-item.ts
         delete-item.ts
         search-items.ts
+  website/          # Astro static site — allourthings.io
+    src/
+      pages/
+        index.astro # Homepage
 ```
 
 ## Tech stack
@@ -30,18 +34,22 @@ packages/
 - **MCP SDK:** `@modelcontextprotocol/sdk`
 - **Validation:** Zod + `zod-to-json-schema` for tool input schemas
 - **Package manager:** Bun workspaces
+- **Website:** Astro 4 (static), deployed to Cloudflare Pages
 
 ## Key commands
 
 Via Taskfile (install Task: `brew install go-task`):
 
 ```bash
-task test          # Seed catalog + open MCP Inspector — fastest test loop
-task seed:reset    # Clear and re-seed catalog.json with 12 test items
-task inspect       # Open MCP Inspector in dev mode
-task dev           # Start server in watch mode (for real AI client)
-task build         # Compile to dist/
-task typecheck     # tsc --noEmit
+task test            # Seed catalog + open MCP Inspector — fastest test loop
+task seed:reset      # Clear and re-seed catalog.json with 12 test items
+task inspect         # Open MCP Inspector in dev mode
+task dev             # Start MCP server in watch mode (for real AI client)
+task build           # Compile MCP server to dist/
+task typecheck       # tsc --noEmit
+task website:dev     # Start website dev server
+task website:build   # Build website for production
+task website:deploy  # Build and deploy website to Cloudflare Pages
 ```
 
 All tasks default to `CATALOG_PATH=./catalog.json` — safe for dev, never touches the real iCloud catalog.
@@ -92,20 +100,20 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 
 | Epic | Phase | Status |
 |---|---|---|
-| 1 — MCP Server MVP | 1 | Largely built (CRUD tools + filesystem backend done) |
+| 1 — MCP Server MVP | 1 | **Complete** — CRUD tools + filesystem backend done |
 | 2 — Publish & Distribute | 1 | Not started (npm publish, MCP Registry) |
 | 2.5 — OpenClaw Skill | 1–3 | Not started (SKILL.md, ClawHub publish, cron alerts) |
 | 3 — Notion Backend | 2 | Not started |
 | 4 — MCP App UIs | 3 | Not started (Browse UI, Dashboard UI) |
 | 5 — Advanced Tools | 3 | Not started (get_spending, search_manuals, prompts) |
 | 6 — iOS App | 4 | Reinstated — SwiftUI app for adding/editing inventory. iOS first. |
-| 7 — Website & Marketing | 2 | Not started (allourthings.io Astro site, docs) |
+| 7 — Website & Marketing | 2 | **In progress** — barebones allourthings.io live on Cloudflare Pages. Full landing page + docs still to do. |
 | 8 — Monetisation | 5 | Not started (license keys via LemonSqueezy/Gumroad, £9–15 one-time) |
 | 9 — Android App | 5 | Not started — follows iOS (Epic 6). Kotlin/Compose. |
 
 ### Upcoming priorities (Phase 1 remaining)
 
-- Publish to npm as `@alloutthings/mcp-server`
+- Publish to npm as `@allourthings/mcp-server`
 - Create `server.json` and publish to MCP Registry
 - Write `SKILL.md` + publish to ClawHub marketplace
 
@@ -114,7 +122,7 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 - Build Notion template database matching item schema
 - Implement Notion backend adapter (`@notionhq/client`)
 - Backend auto-detection (`NOTION_TOKEN` → Notion, else → filesystem)
-- allourthings.io landing page (Astro)
+- allourthings.io full landing page (barebones already live)
 - Setup documentation (per backend, per MCP client)
 
 ## Conventions

@@ -28,6 +28,14 @@ tasks:
     dir: "{{.WEBSITE}}"
     cmd: bun run build
 
+  website:deploy:
+    desc: Build and deploy website to Cloudflare Pages
+    dir: "{{.WEBSITE}}"
+    dotenv: ["../../.env"]
+    cmds:
+      - task: website:build
+      - bunx wrangler pages deploy dist --project-name allourthings
+
   build:
     desc: Compile MCP server to dist/
     dir: "{{.SERVER}}"
