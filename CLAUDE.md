@@ -99,7 +99,7 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 | 4 — MCP App UIs | 3 | Not started (Browse UI, Dashboard UI) |
 | 5 — Advanced Tools | 3 | Not started (get_spending, search_manuals, prompts) |
 | 6 — iOS App | 4 | **Removed from codebase** (commit: "Remove iOS/Swift app, keep MCP server only") — backlog items may need archiving |
-| 7 — Website & Marketing | 2 | Not started (alloutthings.io Astro site, docs) |
+| 7 — Website & Marketing | 2 | Not started (allourthings.io Astro site, docs) |
 | 8 — Monetisation | 5 | Not started (license keys via LemonSqueezy/Gumroad, £9–15 one-time) |
 
 ### Upcoming priorities (Phase 1 remaining)
@@ -113,7 +113,7 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 - Build Notion template database matching item schema
 - Implement Notion backend adapter (`@notionhq/client`)
 - Backend auto-detection (`NOTION_TOKEN` → Notion, else → filesystem)
-- alloutthings.io landing page (Astro)
+- allourthings.io landing page (Astro)
 - Setup documentation (per backend, per MCP client)
 
 ## Conventions
