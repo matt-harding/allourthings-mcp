@@ -1,0 +1,74 @@
+version: "3"
+
+vars:
+  SERVER: packages/mcp-server
+  # Default catalog path for local dev/testing.
+  # Override: CATALOG_PATH=/your/path task <command>
+  CATALOG: "{{.CATALOG_PATH | default \"./catalog.json\"}}"
+
+tasks:
+
+  # ── Development ────────────────────────────────────────────────────────────
+
+  dev:
+    desc: Start MCP server in watch mode (stdio)
+    dir: "{{.SERVER}}"
+    env:
+      CATALOG_PATH: "{{.CATALOG}}"
+    cmd: bun run dev
+
+  build:
+    desc: Compile MCP server to dist/
+    dir: "{{.SERVER}}"
+    cmd: bun run build
+
+  typecheck:
+    desc: Run TypeScript type checking
+    dir: "{{.SERVER}}"
+    cmd: bun run typecheck
+
+  # ── Testing ────────────────────────────────────────────────────────────────
+
+  inspect:
+    desc: Open MCP Inspector in dev mode (no build required)
+    env:
+      CATALOG_PATH: "{{.CATALOG}}"
+    cmd: npx @modelcontextprotocol/inspector bun {{.SERVER}}/src/index.ts
+
+  inspect:prod:
+    desc: Build then open MCP Inspector against compiled dist
+    deps: [build]
+    env:
+      CATALOG_PATH: "{{.CATALOG}}"
+    cmd: npx @modelcontextprotocol/inspector bun {{.SERVER}}/dist/index.js
+
+  seed:
+    desc: Append test items to the catalog
+    env:
+      CATALOG_PATH: "{{.CATALOG}}"
+    cmd: bun {{.SERVER}}/scripts/seed.ts
+
+  seed:reset:
+    desc: Clear catalog and re-seed with test items
+    env:
+      CATALOG_PATH: "{{.CATALOG}}"
+    cmd: bun {{.SERVER}}/scripts/seed.ts --reset
+
+  # Seed then immediately open Inspector — the fastest way to start testing
+  test:
+    desc: Seed catalog and open MCP Inspector
+    env:
+      CATALOG_PATH: "{{.CATALOG}}"
+    cmds:
+      - task: seed:reset
+      - task: inspect
+
+  # ── Housekeeping ───────────────────────────────────────────────────────────
+
+  clean:
+    desc: Remove compiled output
+    cmd: rm -rf {{.SERVER}}/dist
+
+  clean:catalog:
+    desc: Delete the local dev catalog
+    cmd: rm -f "{{.CATALOG}}"

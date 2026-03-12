@@ -15,7 +15,12 @@ export async function searchItems(
       content: [{ type: "text" as const, text: `No items matched: ${input.query}` }],
     };
   }
-  const summary = items.map((item) => `- ${item.name} (${item.id})`).join("\n");
+  const summary = items
+    .map((item) => {
+      const meta = [item.category, item.location].filter(Boolean).join(", ");
+      return `- ${item.name}${meta ? ` [${meta}]` : ""} (${item.id})`;
+    })
+    .join("\n");
   return {
     content: [{ type: "text" as const, text: `${items.length} result(s):\n${summary}` }],
   };

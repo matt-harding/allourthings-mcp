@@ -3,6 +3,7 @@ import type { Backend } from "../backends/interface.js";
 
 export const listItemsInputSchema = z.object({
   category: z.string().optional().describe("Filter by category"),
+  location: z.string().optional().describe("Filter by location/room"),
   tags: z.array(z.string()).optional().describe("Filter by tags (all must match)"),
 });
 
@@ -16,7 +17,12 @@ export async function listItems(
       content: [{ type: "text" as const, text: "No items found." }],
     };
   }
-  const summary = items.map((item) => `- ${item.name} (${item.id})`).join("\n");
+  const summary = items
+    .map((item) => {
+      const meta = [item.category, item.location].filter(Boolean).join(", ");
+      return `- ${item.name}${meta ? ` [${meta}]` : ""} (${item.id})`;
+    })
+    .join("\n");
   return {
     content: [{ type: "text" as const, text: `${items.length} item(s):\n${summary}` }],
   };

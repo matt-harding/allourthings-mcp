@@ -33,17 +33,26 @@ packages/
 
 ## Key commands
 
-All from `packages/mcp-server/`:
+Via Taskfile (install Task: `brew install go-task`):
 
 ```bash
-bun run dev        # Watch mode — starts server over stdio
-bun run build      # Compile to dist/
-bun run typecheck  # tsc --noEmit
+task test          # Seed catalog + open MCP Inspector — fastest test loop
+task seed:reset    # Clear and re-seed catalog.json with 12 test items
+task inspect       # Open MCP Inspector in dev mode
+task dev           # Start server in watch mode (for real AI client)
+task build         # Compile to dist/
+task typecheck     # tsc --noEmit
 ```
 
-Test without a full AI client:
+All tasks default to `CATALOG_PATH=./catalog.json` — safe for dev, never touches the real iCloud catalog.
+
+Directly via Bun (from `packages/mcp-server/`):
+
 ```bash
-npx @modelcontextprotocol/inspector bun packages/mcp-server/src/index.ts
+bun run dev
+bun run build
+bun run typecheck
+bun scripts/seed.ts --reset   # seed with CATALOG_PATH env set
 ```
 
 ## Architecture

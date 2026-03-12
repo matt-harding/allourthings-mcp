@@ -28,7 +28,7 @@ export async function addItem(
     content: [
       {
         type: "text" as const,
-        text: `Added item: ${item.name} (id: ${item.id})`,
+        text: JSON.stringify(item, null, 2),
       },
     ],
   };

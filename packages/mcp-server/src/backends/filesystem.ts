@@ -41,22 +41,30 @@ export class FilesystemBackend implements Backend {
 
   async getItem(idOrName: string): Promise<Item | null> {
     const items = await this.load();
-    return (
-      items.find(
-        (item) =>
-          item.id === idOrName ||
-          item.name.toLowerCase() === idOrName.toLowerCase()
-      ) ?? null
-    );
+    const lower = idOrName.toLowerCase();
+    // Exact ID match
+    const byId = items.find((item) => item.id === idOrName);
+    if (byId) return byId;
+    // Exact name match (case-insensitive)
+    const byName = items.find((item) => item.name.toLowerCase() === lower);
+    if (byName) return byName;
+    // Fuzzy: name contains query
+    return items.find((item) => item.name.toLowerCase().includes(lower)) ?? null;
   }
 
   async listItems(filter?: {
     category?: string;
+    location?: string;
     tags?: string[];
   }): Promise<Item[]> {
     let items = await this.load();
     if (filter?.category) {
       items = items.filter((item) => item.category === filter.category);
+    }
+    if (filter?.location) {
+      items = items.filter(
+        (item) => item.location?.toLowerCase() === filter.location!.toLowerCase()
+      );
     }
     if (filter?.tags?.length) {
       items = items.filter((item) =>

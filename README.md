@@ -20,7 +20,7 @@ The MCP server exposes your household inventory to any MCP-compatible AI client 
 |---|---|
 | `add_item` | Add a new item to your inventory |
 | `get_item` | Retrieve an item by ID or name |
-| `list_items` | List all items, optionally filtered by category or tags |
+| `list_items` | List all items, optionally filtered by category, location, or tags |
 | `update_item` | Update fields on an existing item |
 | `delete_item` | Delete an item by ID |
 | `search_items` | Full-text search across all item fields |
@@ -80,21 +80,45 @@ bun run typecheck
 
 ---
 
-## Testing manually with the MCP Inspector
+## Testing
 
-The easiest way to exercise the tools without a full AI client is the [MCP Inspector](https://github.com/modelcontextprotocol/inspector):
+### Quick start with Task
+
+Install [Task](https://taskfile.dev) (`brew install go-task`), then:
 
 ```bash
-npx @modelcontextprotocol/inspector node packages/mcp-server/dist/index.js
+# Seed test data + open MCP Inspector in one step
+task test
+
+# Or separately:
+task seed:reset   # populate catalog.json with 12 realistic test items
+task inspect      # open MCP Inspector (dev mode, no build required)
 ```
 
-Or in dev mode (no build step required):
+All tasks use `./catalog.json` by default — your real iCloud catalog is never touched. Override with `CATALOG_PATH=/path/to/file task <command>`.
+
+Available tasks:
+
+| Task | Description |
+|---|---|
+| `task test` | Seed + open Inspector — fastest way to start |
+| `task seed` | Append test items to catalog |
+| `task seed:reset` | Clear catalog and re-seed |
+| `task inspect` | MCP Inspector in dev mode |
+| `task inspect:prod` | Build, then MCP Inspector against dist |
+| `task dev` | Start server in watch mode (for connecting a real AI client) |
+| `task build` | Compile to dist/ |
+| `task typecheck` | Run TypeScript type checking |
+| `task clean` | Remove dist/ |
+| `task clean:catalog` | Delete local dev catalog |
+
+### Manual — MCP Inspector only
+
+The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) opens a browser UI where you can call each tool directly and inspect responses:
 
 ```bash
 npx @modelcontextprotocol/inspector bun packages/mcp-server/src/index.ts
 ```
-
-This opens a browser UI where you can call each tool directly and inspect the responses.
 
 ---
 
@@ -106,14 +130,14 @@ Add the following to your Claude Desktop config (`~/Library/Application Support/
 {
   "mcpServers": {
     "alloutthings": {
-      "command": "node",
+      "command": "bun",
       "args": ["/path/to/AllOurThings/packages/mcp-server/dist/index.js"]
     }
   }
 }
 ```
 
-Or using Bun for development (no build step):
+Or in dev mode (no build step required):
 
 ```json
 {
@@ -130,5 +154,6 @@ Then restart Claude Desktop. You can now ask things like:
 
 - *"Add my Bosch washing machine, bought from John Lewis for £599 in January 2024 with a 2 year warranty"*
 - *"What appliances do I own?"*
+- *"What's in the kitchen?"*
 - *"When does my washing machine warranty expire?"*
 - *"Search for anything related to Samsung"*
