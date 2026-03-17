@@ -1,0 +1,20 @@
+{
+  "name": "Nespresso Vertuo Next",
+  "category": "appliance",
+  "brand": "Nespresso",
+  "model": "Vertuo Next XN910",
+  "purchase_date": "2024-10-31",
+  "purchase_price": 79,
+  "currency": "GBP",
+  "retailer": "Amazon",
+  "warranty_expires": "2025-10-31",
+  "location": "kitchen",
+  "tags": [
+    "coffee",
+    "kitchen"
+  ],
+  "notes": "Descale every 3 months. Warranty expired.",
+  "id": "95a4d77c",
+  "created_at": "2026-03-15T09:42:23.258Z",
+  "updated_at": "2026-03-15T09:42:23.258Z"
+}

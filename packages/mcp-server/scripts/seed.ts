@@ -1,26 +1,45 @@
 /**
- * Seed script — populates the catalog with realistic test items.
+ * Seed script — populates the vault with realistic test items.
  *
  * Usage:
  *   bun packages/mcp-server/scripts/seed.ts           # append items
  *   bun packages/mcp-server/scripts/seed.ts --reset   # clear first, then seed
  *
- * Respects CATALOG_PATH env var (default: ./catalog.json)
+ * Respects --data-dir arg or ALLOURTHINGS_DATA_DIR env var (default: ./dev-vault)
  */
 
-import { writeFile, readFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readdir, rm } from "fs/promises";
 import { existsSync } from "fs";
-import { dirname } from "path";
-import { randomUUID } from "crypto";
+import { join } from "path";
+import { randomBytes } from "crypto";
 
-const catalogPath =
-  process.env.CATALOG_PATH ?? "./catalog.json";
+const argIndex = process.argv.indexOf("--data-dir");
+const dataDir =
+  argIndex !== -1 && process.argv[argIndex + 1]
+    ? process.argv[argIndex + 1]
+    : process.env.ALLOURTHINGS_DATA_DIR ?? "./dev-vault";
 
 const reset = process.argv.includes("--reset");
+const itemsDir = join(dataDir, "items");
+
+function generateId(): string {
+  return randomBytes(4).toString("hex");
+}
+
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50)
+    .replace(/-+$/, "");
+}
 
 const now = new Date();
-const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000).toISOString().split("T")[0];
-const daysAhead = (n: number) => new Date(now.getTime() + n * 86_400_000).toISOString().split("T")[0];
+const daysAgo = (n: number) =>
+  new Date(now.getTime() - n * 86_400_000).toISOString().split("T")[0];
+const daysAhead = (n: number) =>
+  new Date(now.getTime() + n * 86_400_000).toISOString().split("T")[0];
 
 const seedItems = [
   {
@@ -185,36 +204,42 @@ const seedItems = [
 ];
 
 async function main() {
-  await mkdir(dirname(catalogPath) === "." ? "." : dirname(catalogPath), {
-    recursive: true,
-  });
+  if (reset && existsSync(itemsDir)) {
+    await rm(itemsDir, { recursive: true });
+    console.log("--reset: cleared existing items.");
+  }
 
-  let existing: object[] = [];
-  if (!reset && existsSync(catalogPath)) {
-    const raw = await readFile(catalogPath, "utf-8");
-    existing = JSON.parse(raw);
-    console.log(`Found ${existing.length} existing item(s) — appending.`);
-  } else if (reset) {
-    console.log("--reset: clearing existing catalog.");
+  await mkdir(itemsDir, { recursive: true });
+
+  let existingCount = 0;
+  if (!reset && existsSync(itemsDir)) {
+    const entries = await readdir(itemsDir);
+    existingCount = entries.length;
+    if (existingCount > 0) {
+      console.log(`Found ${existingCount} existing item(s) — appending.`);
+    }
   }
 
   const timestamp = now.toISOString();
   const newItems = seedItems.map((item) => ({
     ...item,
-    id: randomUUID(),
+    id: generateId(),
     created_at: timestamp,
     updated_at: timestamp,
   }));
 
-  const catalog = [...existing, ...newItems];
-  await writeFile(catalogPath, JSON.stringify(catalog, null, 2));
+  for (const item of newItems) {
+    const dir = join(itemsDir, `${toSlug(item.name)}-${item.id}`);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "item.json"), JSON.stringify(item, null, 2));
+  }
 
   console.log(`\nSeeded ${newItems.length} items:`);
   for (const item of newItems) {
-    const meta = [item.category, item.location].filter(Boolean).join(", ");
-    console.log(`  + ${item.name} [${meta}]`);
+    const slug = toSlug(item.name);
+    console.log(`  + ${slug}-${item.id}/`);
   }
-  console.log(`\nCatalog: ${catalogPath} (${catalog.length} total items)`);
+  console.log(`\nVault: ${dataDir} (${existingCount + newItems.length} total items)`);
 }
 
 main().catch((err) => {

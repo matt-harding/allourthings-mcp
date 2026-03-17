@@ -1,0 +1,19 @@
+{
+  "name": "Nintendo Switch OLED",
+  "category": "electronics",
+  "brand": "Nintendo",
+  "model": "Switch OLED (White)",
+  "purchase_date": "2024-04-14",
+  "purchase_price": 309,
+  "currency": "GBP",
+  "retailer": "GAME",
+  "warranty_expires": "2025-04-14",
+  "location": "living room",
+  "tags": [
+    "gaming",
+    "console"
+  ],
+  "id": "41e3fcaf",
+  "created_at": "2026-03-15T09:42:23.258Z",
+  "updated_at": "2026-03-15T09:42:23.258Z"
+}

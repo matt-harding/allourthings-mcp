@@ -1,0 +1,20 @@
+{
+  "name": "Bosch Serie 6 Washing Machine",
+  "category": "appliance",
+  "brand": "Bosch",
+  "model": "WGG244A9GB",
+  "purchase_date": "2025-02-08",
+  "purchase_price": 649,
+  "currency": "GBP",
+  "retailer": "John Lewis",
+  "warranty_expires": "2027-02-08",
+  "location": "kitchen",
+  "tags": [
+    "white goods",
+    "laundry"
+  ],
+  "notes": "1400 rpm spin. Uses programme 3 for cottons.",
+  "id": "3ed1798e",
+  "created_at": "2026-03-15T09:42:23.258Z",
+  "updated_at": "2026-03-15T09:42:23.258Z"
+}

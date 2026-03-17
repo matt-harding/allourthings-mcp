@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export const AttachmentSchema = z.object({
+  filename: z.string(),
+  type: z.enum(["manual", "receipt", "photo", "warranty", "other"]),
+  label: z.string().optional(),
+});
+
+export type Attachment = z.infer<typeof AttachmentSchema>;
+
 export const ItemSchema = z
   .object({
     id: z.string(),
@@ -19,8 +27,7 @@ export const ItemSchema = z
     features: z.array(z.string()).optional(),
     notes: z.string().optional(),
     tags: z.array(z.string()).optional(),
-    manual_ref: z.string().optional(),
-    images: z.array(z.string()).optional(),
+    attachments: z.array(AttachmentSchema).optional(),
   })
   .passthrough(); // allow user-defined custom fields
 

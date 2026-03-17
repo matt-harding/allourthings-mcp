@@ -1,0 +1,20 @@
+{
+  "name": "Apple MacBook Pro 14\"",
+  "category": "electronics",
+  "brand": "Apple",
+  "model": "MacBook Pro 14-inch M3 Pro",
+  "purchase_date": "2026-01-14",
+  "purchase_price": 1999,
+  "currency": "GBP",
+  "retailer": "Apple Store",
+  "warranty_expires": "2027-01-14",
+  "location": "office",
+  "tags": [
+    "laptop",
+    "work"
+  ],
+  "serial_number": "C02XG0Y1JGH7",
+  "id": "6de78951",
+  "created_at": "2026-03-15T09:42:23.258Z",
+  "updated_at": "2026-03-15T09:42:23.258Z"
+}

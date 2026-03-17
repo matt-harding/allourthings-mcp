@@ -3,9 +3,9 @@ version: "3"
 vars:
   SERVER: packages/mcp-server
   WEBSITE: packages/website
-  # Default catalog path for local dev/testing.
-  # Override: CATALOG_PATH=/your/path task <command>
-  CATALOG: "{{.CATALOG_PATH | default \"./catalog.json\"}}"
+  # Default vault path for local dev/testing.
+  # Override: DATA_DIR=/your/path task <command>
+  DATA_DIR: "{{.DATA_DIR | default \"./dev-vault\"}}"
 
 tasks:
 
@@ -15,7 +15,7 @@ tasks:
     desc: Start MCP server in watch mode (stdio)
     dir: "{{.SERVER}}"
     env:
-      CATALOG_PATH: "{{.CATALOG}}"
+      ALLOURTHINGS_DATA_DIR: "{{.DATA_DIR}}"
     cmd: bun run dev
 
   website:dev:
@@ -50,34 +50,24 @@ tasks:
 
   inspect:
     desc: Open MCP Inspector in dev mode (no build required)
-    env:
-      CATALOG_PATH: "{{.CATALOG}}"
-    cmd: npx @modelcontextprotocol/inspector bun {{.SERVER}}/src/index.ts
+    cmd: npx @modelcontextprotocol/inspector bun {{.SERVER}}/src/index.ts --data-dir {{.DATA_DIR}}
 
   inspect:prod:
     desc: Build then open MCP Inspector against compiled dist
     deps: [build]
-    env:
-      CATALOG_PATH: "{{.CATALOG}}"
-    cmd: npx @modelcontextprotocol/inspector bun {{.SERVER}}/dist/index.js
+    cmd: npx @modelcontextprotocol/inspector bun {{.SERVER}}/dist/index.js --data-dir {{.DATA_DIR}}
 
   seed:
-    desc: Append test items to the catalog
-    env:
-      CATALOG_PATH: "{{.CATALOG}}"
-    cmd: bun {{.SERVER}}/scripts/seed.ts
+    desc: Append test items to the vault
+    cmd: bun {{.SERVER}}/scripts/seed.ts --data-dir {{.DATA_DIR}}
 
   seed:reset:
-    desc: Clear catalog and re-seed with test items
-    env:
-      CATALOG_PATH: "{{.CATALOG}}"
-    cmd: bun {{.SERVER}}/scripts/seed.ts --reset
+    desc: Clear vault and re-seed with test items
+    cmd: bun {{.SERVER}}/scripts/seed.ts --data-dir {{.DATA_DIR}} --reset
 
   # Seed then immediately open Inspector — the fastest way to start testing
   test:
-    desc: Seed catalog and open MCP Inspector
-    env:
-      CATALOG_PATH: "{{.CATALOG}}"
+    desc: Seed vault and open MCP Inspector
     cmds:
       - task: seed:reset
       - task: inspect
@@ -88,6 +78,6 @@ tasks:
     desc: Remove compiled output
     cmd: rm -rf {{.SERVER}}/dist
 
-  clean:catalog:
-    desc: Delete the local dev catalog
-    cmd: rm -f "{{.CATALOG}}"
+  clean:vault:
+    desc: Delete the local dev vault
+    cmd: rm -rf "{{.DATA_DIR}}"

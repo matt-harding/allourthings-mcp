@@ -1,55 +1,95 @@
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, readdir, rename, rm } from "fs/promises";
 import { existsSync } from "fs";
-import { join, dirname } from "path";
-import { randomUUID } from "crypto";
+import { join } from "path";
+import { randomBytes } from "crypto";
 import type { Backend } from "./interface.js";
 import { ItemSchema } from "../schema.js";
 import type { Item, NewItem } from "../schema.js";
 
+function generateId(): string {
+  return randomBytes(4).toString("hex");
+}
+
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50)
+    .replace(/-+$/, "");
+}
+
 export class FilesystemBackend implements Backend {
-  private catalogPath: string;
+  private dataDir: string;
 
-  constructor(catalogPath: string) {
-    this.catalogPath = catalogPath;
+  constructor(dataDir: string) {
+    this.dataDir = dataDir;
   }
 
-  private async load(): Promise<Item[]> {
-    if (!existsSync(this.catalogPath)) return [];
-    const raw = await readFile(this.catalogPath, "utf-8");
-    const parsed = JSON.parse(raw);
-    return parsed.map((item: unknown) => ItemSchema.parse(item));
+  private get itemsDir(): string {
+    return join(this.dataDir, "items");
   }
 
-  private async save(items: Item[]): Promise<void> {
-    await mkdir(dirname(this.catalogPath), { recursive: true });
-    await writeFile(this.catalogPath, JSON.stringify(items, null, 2));
+  private itemDirPath(name: string, id: string): string {
+    return join(this.itemsDir, `${toSlug(name)}-${id}`);
+  }
+
+  // Find an item's directory by its 8-char ID suffix.
+  private async findDirById(id: string): Promise<string | null> {
+    if (!existsSync(this.itemsDir)) return null;
+    const entries = await readdir(this.itemsDir);
+    const match = entries.find((e) => e.slice(-8) === id);
+    return match ? join(this.itemsDir, match) : null;
+  }
+
+  private async readItemFromDir(dir: string): Promise<Item> {
+    const raw = await readFile(join(dir, "item.json"), "utf-8");
+    return ItemSchema.parse(JSON.parse(raw));
+  }
+
+  private async writeItemToDir(dir: string, item: Item): Promise<void> {
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "item.json"), JSON.stringify(item, null, 2));
+  }
+
+  private async loadAll(): Promise<Item[]> {
+    if (!existsSync(this.itemsDir)) return [];
+    const entries = await readdir(this.itemsDir);
+    const items: Item[] = [];
+    for (const entry of entries) {
+      const itemPath = join(this.itemsDir, entry, "item.json");
+      if (!existsSync(itemPath)) continue;
+      try {
+        const raw = await readFile(itemPath, "utf-8");
+        items.push(ItemSchema.parse(JSON.parse(raw)));
+      } catch {
+        // skip malformed items
+      }
+    }
+    return items;
   }
 
   async addItem(newItem: NewItem): Promise<Item> {
-    const items = await this.load();
+    const id = generateId();
     const now = new Date().toISOString();
-    const item: Item = {
-      ...newItem,
-      id: randomUUID(),
-      created_at: now,
-      updated_at: now,
-    };
-    items.push(item);
-    await this.save(items);
+    const item: Item = { ...newItem, id, created_at: now, updated_at: now };
+    await this.writeItemToDir(this.itemDirPath(item.name, id), item);
     return item;
   }
 
   async getItem(idOrName: string): Promise<Item | null> {
-    const items = await this.load();
+    // Try exact ID match first
+    const dirById = await this.findDirById(idOrName);
+    if (dirById) return this.readItemFromDir(dirById);
+
+    // Fall back to name search
+    const items = await this.loadAll();
     const lower = idOrName.toLowerCase();
-    // Exact ID match
-    const byId = items.find((item) => item.id === idOrName);
-    if (byId) return byId;
-    // Exact name match (case-insensitive)
-    const byName = items.find((item) => item.name.toLowerCase() === lower);
-    if (byName) return byName;
-    // Fuzzy: name contains query
-    return items.find((item) => item.name.toLowerCase().includes(lower)) ?? null;
+    return (
+      items.find((i) => i.name.toLowerCase() === lower) ??
+      items.find((i) => i.name.toLowerCase().includes(lower)) ??
+      null
+    );
   }
 
   async listItems(filter?: {
@@ -57,53 +97,51 @@ export class FilesystemBackend implements Backend {
     location?: string;
     tags?: string[];
   }): Promise<Item[]> {
-    let items = await this.load();
+    let items = await this.loadAll();
     if (filter?.category) {
-      items = items.filter((item) => item.category === filter.category);
+      items = items.filter((i) => i.category === filter.category);
     }
     if (filter?.location) {
       items = items.filter(
-        (item) => item.location?.toLowerCase() === filter.location!.toLowerCase()
+        (i) => i.location?.toLowerCase() === filter.location!.toLowerCase()
       );
     }
     if (filter?.tags?.length) {
-      items = items.filter((item) =>
-        filter.tags!.every((tag) => item.tags?.includes(tag))
+      items = items.filter((i) =>
+        filter.tags!.every((tag) => i.tags?.includes(tag))
       );
     }
     return items;
   }
 
-  async updateItem(
-    id: string,
-    updates: Partial<NewItem>
-  ): Promise<Item | null> {
-    const items = await this.load();
-    const index = items.findIndex((item) => item.id === id);
-    if (index === -1) return null;
-    items[index] = {
-      ...items[index],
+  async updateItem(id: string, updates: Partial<NewItem>): Promise<Item | null> {
+    const oldDir = await this.findDirById(id);
+    if (!oldDir) return null;
+    const existing = await this.readItemFromDir(oldDir);
+    const updated: Item = {
+      ...existing,
       ...updates,
       id,
       updated_at: new Date().toISOString(),
     };
-    await this.save(items);
-    return items[index];
+    const newDir = this.itemDirPath(updated.name, id);
+    if (oldDir !== newDir) {
+      await rename(oldDir, newDir);
+    }
+    await this.writeItemToDir(newDir, updated);
+    return updated;
   }
 
   async deleteItem(id: string): Promise<boolean> {
-    const items = await this.load();
-    const filtered = items.filter((item) => item.id !== id);
-    if (filtered.length === items.length) return false;
-    await this.save(filtered);
+    const dir = await this.findDirById(id);
+    if (!dir) return false;
+    await rm(dir, { recursive: true });
     return true;
   }
 
   async searchItems(query: string): Promise<Item[]> {
-    const items = await this.load();
+    const items = await this.loadAll();
     const lower = query.toLowerCase();
-    return items.filter((item) =>
-      JSON.stringify(item).toLowerCase().includes(lower)
-    );
+    return items.filter((i) => JSON.stringify(i).toLowerCase().includes(lower));
   }
 }
