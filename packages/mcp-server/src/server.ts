@@ -14,7 +14,7 @@ import { searchItems, searchItemsInputSchema } from "./tools/search-items.js";
 
 export function createServer(backend: Backend) {
   const server = new Server(
-    { name: "alloutthings", version: "0.1.0" },
+    { name: "allourthings", version: "0.1.0" },
     { capabilities: { tools: {} } }
   );
 
