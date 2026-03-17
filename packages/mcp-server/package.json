@@ -1,13 +1,14 @@
 {
-  "name": "@alloutthings/mcp-server",
+  "name": "@allourthings/mcp-server",
   "version": "0.1.0",
   "description": "MCP server for All Our Things — AI-powered household inventory",
   "type": "module",
+  "files": ["dist"],
   "bin": {
-    "alloutthings-mcp-server": "./dist/index.js"
+    "allourthings-mcp-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build": "bun build src/index.ts --outdir dist --target node",
     "dev": "bun --watch src/index.ts",
     "start": "bun dist/index.js",
     "test": "bun test",

@@ -2,7 +2,7 @@
 
 > Your stuff, your data, your choice of storage. AI-powered answers about everything you own.
 
-A monorepo for the All Our Things household inventory system. Ask your AI assistant natural language questions about everything you own — appliances, furniture, subscriptions, warranties, and more.
+Ask your AI assistant natural language questions about everything you own — appliances, furniture, subscriptions, warranties, manuals, receipts, and more. Your data stays on your own device.
 
 **Website:** [allourthings.io](https://allourthings.io)
 
@@ -15,9 +15,53 @@ A monorepo for the All Our Things household inventory system. Ask your AI assist
 
 ---
 
-## MCP Server
+## Platform support
 
-The MCP server exposes your household inventory to any MCP-compatible AI client (Claude Desktop, VS Code, Cursor, etc.) via six tools:
+| Platform | AI assistant | Add / browse inventory |
+|---|---|---|
+| macOS / Windows / Linux | ✅ Via Claude Desktop + MCP server | ✅ |
+| iOS | 🔜 iOS app coming (Epic 6) | 🔜 iOS app coming |
+| Android | 🔜 Planned (Epic 9) | 🔜 Planned |
+
+The MCP server requires a desktop MCP client (Claude Desktop, Cursor, etc.). Mobile AI assistant access depends on MCP support arriving in mobile clients — the iOS app will handle add/browse in the meantime.
+
+---
+
+## Quick start
+
+> **Desktop only.** Requires macOS, Windows, or Linux with [Claude Desktop](https://claude.ai/download) or another MCP-compatible client.
+
+### 1. Add to Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "allourthings": {
+      "command": "npx",
+      "args": ["-y", "@allourthings/mcp-server", "--data-dir", "~/Documents/AllOurThings"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. Your inventory vault will be created automatically on first use.
+
+### 2. Start asking questions
+
+- *"Add my Bosch washing machine, bought from John Lewis for £649 in January 2024 with a 2-year warranty"*
+- *"What appliances do I own?"*
+- *"What's in the kitchen?"*
+- *"When does my TV warranty expire?"*
+- *"Search for anything Samsung"*
+- *"How much have I spent on electronics?"*
+
+---
+
+## How it works
+
+The MCP server exposes your inventory to any MCP-compatible AI client via six tools:
 
 | Tool | Description |
 |---|---|
@@ -28,19 +72,57 @@ The MCP server exposes your household inventory to any MCP-compatible AI client 
 | `delete_item` | Delete an item by ID |
 | `search_items` | Full-text search across all item fields |
 
-### Storage
+---
 
-By default, your inventory is stored as a JSON file on iCloud Drive:
+## Data
+
+### Vault structure
+
+Your inventory lives in a **vault** — a plain directory on your filesystem. Each item gets its own folder:
 
 ```
-~/Library/Mobile Documents/com~apple~CloudDocs/AllOurThings/catalog.json
+~/Documents/AllOurThings/
+  items/
+    dyson-v15-detect-a1b2c3d4/
+      item.json
+      manual.pdf
+      receipt.jpg
+    samsung-65-qled-tv-b5c6d7e8/
+      item.json
+      warranty.pdf
 ```
 
-Override the location by setting the `CATALOG_PATH` environment variable.
+Attachments (manuals, receipts, photos) sit alongside the item JSON. You can browse and edit the vault directly in Finder or File Explorer.
 
-### Data schema
+### Item schema
 
-Every item has a small set of required fields (`id`, `name`, `created_at`, `updated_at`) and a collection of well-known optional fields (`category`, `brand`, `model`, `purchase_date`, `purchase_price`, `warranty_expires`, `location`, `tags`, etc.). You can also store any custom fields you like — they are preserved as-is.
+Every item has required fields (`id`, `name`, `created_at`, `updated_at`) and well-known optional fields:
+
+`category` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
+
+The `attachments` field links PDFs and images stored in the item's folder:
+
+```json
+{
+  "attachments": [
+    { "filename": "manual.pdf",  "type": "manual"   },
+    { "filename": "receipt.jpg", "type": "receipt"  },
+    { "filename": "photo.jpg",   "type": "photo"    }
+  ]
+}
+```
+
+You can also add any custom fields you like — they are preserved as-is.
+
+### Configuration
+
+| Method | Example |
+|---|---|
+| `--data-dir` arg *(recommended)* | `--data-dir ~/Documents/AllOurThings` |
+| `ALLOURTHINGS_DATA_DIR` env var | `ALLOURTHINGS_DATA_DIR=~/Documents/AllOurThings` |
+| Default | `~/Documents/AllOurThings` |
+
+The `--data-dir` arg is the recommended approach — it's visible directly in your MCP client config.
 
 ---
 
@@ -57,95 +139,22 @@ Every item has a small set of required fields (`id`, `name`, `created_at`, `upda
 bun install
 ```
 
-### Run in dev mode
-
-```bash
-task dev           # MCP server in watch mode
-task website:dev   # Website dev server
-```
-
-### Build
-
-```bash
-task build         # Compile MCP server to dist/
-task website:build # Build website to packages/website/dist/
-```
-
-### Typecheck
-
-```bash
-task typecheck
-```
-
----
-
-## Testing
-
-### Quick start with Task
-
-```bash
-# Seed test data + open MCP Inspector in one step
-task test
-
-# Or separately:
-task seed:reset   # populate catalog.json with 12 realistic test items
-task inspect      # open MCP Inspector (dev mode, no build required)
-```
-
-All tasks use `./catalog.json` by default — your real iCloud catalog is never touched. Override with `CATALOG_PATH=/path/to/file task <command>`.
-
-Available tasks:
+### Tasks
 
 | Task | Description |
 |---|---|
-| `task test` | Seed + open Inspector — fastest way to start |
-| `task seed` | Append test items to catalog |
-| `task seed:reset` | Clear catalog and re-seed |
-| `task inspect` | MCP Inspector in dev mode |
-| `task inspect:prod` | Build, then MCP Inspector against dist |
-| `task dev` | Start MCP server in watch mode |
+| `task dev` | Seed vault + open MCP Inspector — fastest way to test |
+| `task test:run` | Run automated tests |
+| `task seed` | Append test items to dev vault |
+| `task seed:reset` | Clear dev vault and re-seed |
+| `task inspect` | Open MCP Inspector (dev mode, no build required) |
+| `task inspect:prod` | Build, then open MCP Inspector against dist |
 | `task build` | Compile MCP server to dist/ |
 | `task typecheck` | Run TypeScript type checking |
 | `task clean` | Remove dist/ |
-| `task clean:catalog` | Delete local dev catalog |
+| `task clean:vault` | Delete local dev vault |
 | `task website:dev` | Start website dev server |
 | `task website:build` | Build website for production |
-| `task website:deploy` | Build and deploy website to Cloudflare Pages |
+| `task website:deploy` | Build and deploy to Cloudflare Pages |
 
----
-
-## Connecting to Claude Desktop
-
-Add the following to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "allourthings": {
-      "command": "bun",
-      "args": ["/path/to/AllOurThings/packages/mcp-server/dist/index.js"]
-    }
-  }
-}
-```
-
-Or in dev mode (no build step required):
-
-```json
-{
-  "mcpServers": {
-    "allourthings": {
-      "command": "bun",
-      "args": ["/path/to/AllOurThings/packages/mcp-server/src/index.ts"]
-    }
-  }
-}
-```
-
-Then restart Claude Desktop. You can now ask things like:
-
-- *"Add my Bosch washing machine, bought from John Lewis for £599 in January 2024 with a 2 year warranty"*
-- *"What appliances do I own?"*
-- *"What's in the kitchen?"*
-- *"When does my washing machine warranty expire?"*
-- *"Search for anything related to Samsung"*
+All tasks use `./dev-vault` by default. Override with `DATA_DIR=/your/path task <command>`.

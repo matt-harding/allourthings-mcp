@@ -35,4 +35,16 @@ describe("resolveDataDir", () => {
     expect(resolveDataDir(["bun", "index.ts", "--verbose", "--data-dir", "/path"], {}))
       .toBe("/path");
   });
+
+  test("expands ~ in --data-dir arg", () => {
+    const result = resolveDataDir(["bun", "index.ts", "--data-dir", "~/Documents/AllOurThings"], {});
+    expect(result).toBe(join(homedir(), "Documents/AllOurThings"));
+    expect(result).not.toContain("~");
+  });
+
+  test("expands ~ in env var", () => {
+    const result = resolveDataDir(["bun", "index.ts"], { ALLOURTHINGS_DATA_DIR: "~/my-vault" });
+    expect(result).toBe(join(homedir(), "my-vault"));
+    expect(result).not.toContain("~");
+  });
 });
