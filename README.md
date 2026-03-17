@@ -124,6 +124,8 @@ You can also add any custom fields you like — they are preserved as-is.
 
 The `--data-dir` arg is the recommended approach — it's visible directly in your MCP client config.
 
+> **macOS note:** Claude Desktop spawns the MCP server as a subprocess, so macOS file access prompts may not appear when the server first tries to write to your chosen vault location. If `add_item` hangs silently, the vault directory is likely being blocked by macOS privacy controls. Current workaround: use `~/Desktop/AllOurThings` (Desktop access is granted to Claude Desktop by default) or add `bun` (`/opt/homebrew/bin/bun`) to Full Disk Access in System Settings → Privacy & Security. A proper installer that handles permissions correctly is planned.
+
 ---
 
 ## Development
