@@ -1,5 +1,5 @@
 {
-  "name": "alloutthings",
+  "name": "allourthings",
   "private": true,
   "workspaces": [
     "packages/*"

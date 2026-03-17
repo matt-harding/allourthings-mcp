@@ -11,7 +11,7 @@ tasks:
 
   # ── Development ────────────────────────────────────────────────────────────
 
-  dev:
+  dev:mcp:
     desc: Start MCP server in watch mode (stdio)
     dir: "{{.SERVER}}"
     env:
