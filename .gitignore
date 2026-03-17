@@ -2,8 +2,6 @@ node_modules/
 .env
 dist/
 .DS_Store
-*.js.map
-*.d.ts.map
 
-# Local dev catalog (created by seed script)
-catalog.json
+# Local dev vault (created by seed script / task dev)
+dev-vault/
