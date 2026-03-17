@@ -3,17 +3,17 @@
   "category": "appliance",
   "brand": "Meaco",
   "model": "Meaco12L Low Energy",
-  "purchase_date": "2025-03-30",
+  "purchase_date": "2025-04-01",
   "purchase_price": 189,
   "currency": "GBP",
   "retailer": "Amazon",
-  "warranty_expires": "2027-03-30",
+  "warranty_expires": "2027-04-01",
   "location": "bedroom",
   "tags": [
     "appliance",
     "air quality"
   ],
-  "id": "10674c3b",
-  "created_at": "2026-03-15T09:42:23.258Z",
-  "updated_at": "2026-03-15T09:42:23.258Z"
+  "id": "dc7b89f9",
+  "created_at": "2026-03-17T19:17:22.133Z",
+  "updated_at": "2026-03-17T19:17:22.133Z"
 }

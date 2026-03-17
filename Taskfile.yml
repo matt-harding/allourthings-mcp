@@ -66,11 +66,18 @@ tasks:
     cmd: bun {{.SERVER}}/scripts/seed.ts --data-dir {{.DATA_DIR}} --reset
 
   # Seed then immediately open Inspector — the fastest way to start testing
-  test:
+  dev:
     desc: Seed vault and open MCP Inspector
     cmds:
       - task: seed:reset
       - task: inspect
+
+  # ── Automated tests ────────────────────────────────────────────────────────
+
+  test:run:
+    desc: Run all automated tests
+    dir: "{{.SERVER}}"
+    cmd: bun test
 
   # ── Housekeeping ───────────────────────────────────────────────────────────
 

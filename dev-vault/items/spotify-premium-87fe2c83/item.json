@@ -2,7 +2,7 @@
   "name": "Spotify Premium",
   "category": "subscription",
   "brand": "Spotify",
-  "purchase_date": "2022-12-01",
+  "purchase_date": "2022-12-03",
   "purchase_price": 11.99,
   "currency": "GBP",
   "retailer": "Spotify",
@@ -13,7 +13,7 @@
     "subscription"
   ],
   "notes": "Family plan. Renews monthly.",
-  "id": "500ad758",
-  "created_at": "2026-03-15T09:42:23.258Z",
-  "updated_at": "2026-03-15T09:42:23.258Z"
+  "id": "87fe2c83",
+  "created_at": "2026-03-17T19:17:22.133Z",
+  "updated_at": "2026-03-17T19:17:22.133Z"
 }

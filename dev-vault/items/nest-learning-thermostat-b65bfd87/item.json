@@ -3,18 +3,18 @@
   "category": "smart home",
   "brand": "Google",
   "model": "Nest Learning Thermostat 3rd Gen",
-  "purchase_date": "2024-01-05",
+  "purchase_date": "2024-01-07",
   "purchase_price": 219,
   "currency": "GBP",
   "retailer": "Google Store",
-  "warranty_expires": "2025-10-01",
+  "warranty_expires": "2025-10-03",
   "location": "hallway",
   "tags": [
     "smart home",
     "heating"
   ],
   "notes": "Linked to Google Home. Schedule set for weekdays 7am–10pm.",
-  "id": "f94c12f2",
-  "created_at": "2026-03-15T09:42:23.258Z",
-  "updated_at": "2026-03-15T09:42:23.258Z"
+  "id": "b65bfd87",
+  "created_at": "2026-03-17T19:17:22.133Z",
+  "updated_at": "2026-03-17T19:17:22.133Z"
 }

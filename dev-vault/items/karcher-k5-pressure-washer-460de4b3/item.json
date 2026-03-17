@@ -3,17 +3,17 @@
   "category": "appliance",
   "brand": "Karcher",
   "model": "K5 Premium Full Control",
-  "purchase_date": "2025-08-27",
+  "purchase_date": "2025-08-29",
   "purchase_price": 249,
   "currency": "GBP",
   "retailer": "B&Q",
-  "warranty_expires": "2026-08-27",
+  "warranty_expires": "2026-08-29",
   "location": "garage",
   "tags": [
     "outdoor",
     "cleaning"
   ],
-  "id": "bcb32398",
-  "created_at": "2026-03-15T09:42:23.258Z",
-  "updated_at": "2026-03-15T09:42:23.258Z"
+  "id": "460de4b3",
+  "created_at": "2026-03-17T19:17:22.133Z",
+  "updated_at": "2026-03-17T19:17:22.133Z"
 }

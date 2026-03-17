@@ -1,23 +1,10 @@
 import { readFile, writeFile, mkdir, readdir, rename, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { randomBytes } from "crypto";
 import type { Backend } from "./interface.js";
 import { ItemSchema } from "../schema.js";
 import type { Item, NewItem } from "../schema.js";
-
-function generateId(): string {
-  return randomBytes(4).toString("hex");
-}
-
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50)
-    .replace(/-+$/, "");
-}
+import { generateId, toSlug } from "../utils.js";
 
 export class FilesystemBackend implements Backend {
   private dataDir: string;
