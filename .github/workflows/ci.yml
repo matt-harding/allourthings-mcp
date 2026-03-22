@@ -29,6 +29,7 @@ jobs:
         working-directory: packages/mcp-server
         run: |
           npm i --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts
           npm audit --audit-level=high
 
       - name: Type check
