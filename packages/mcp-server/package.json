@@ -4,9 +4,11 @@
   "description": "MCP server for All Our Things — AI-powered household inventory",
   "license": "MIT",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "bin": {
-    "allourthings-mcp-server": "./dist/index.js"
+    "allourthings-mcp-server": "dist/index.js"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node",
