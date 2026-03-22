@@ -12,7 +12,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "4"
+    "astro": "6"
   },
   "devDependencies": {
     "wrangler": "^4.72.0"
