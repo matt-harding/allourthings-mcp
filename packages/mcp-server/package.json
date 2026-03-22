@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "MCP server for All Our Things — AI-powered household inventory",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/matt-harding/AllOurThings.git"
+  },
   "type": "module",
   "files": [
     "dist"
