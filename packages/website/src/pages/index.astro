@@ -86,6 +86,46 @@ const description = "All Our Things is an AI-powered household inventory system.
         max-width: 520px;
       }
 
+      .install {
+        margin-bottom: 3rem;
+      }
+
+      .install h2 {
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.75rem;
+      }
+
+      .install pre {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        line-height: 1.6;
+      }
+
+      .install code {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        color: var(--text);
+      }
+
+      .npm-link {
+        display: inline-block;
+        margin-top: 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .npm-link:hover {
+        color: var(--accent);
+      }
+
       .linkedin {
         font-size: 0.875rem;
         color: var(--muted);
@@ -111,9 +151,23 @@ const description = "All Our Things is an AI-powered household inventory system.
       <h1>Your household inventory,<br />understood by AI.</h1>
       <p class="description">
         Ask natural language questions about everything you own — appliances, warranties, manuals, spending.
-        Works with any MCP-compatible AI client, with native iOS and Android apps coming soon.
-        Your data stays on your own storage.
+        Works with any MCP-compatible AI client. Your data stays on your own storage.
       </p>
+
+      <div class="install">
+        <h2>Get started</h2>
+        <pre><code>{`{
+  "mcpServers": {
+    "allourthings": {
+      "command": "npx",
+      "args": ["-y", "@allourthings/mcp-server"]
+    }
+  }
+}`}</code></pre>
+        <a class="npm-link" href="https://www.npmjs.com/package/@allourthings/mcp-server" target="_blank" rel="noopener">
+          @allourthings/mcp-server on npm &rarr;
+        </a>
+      </div>
 
       <a class="linkedin" href="https://www.linkedin.com/in/matthewrharding/" target="_blank" rel="noopener">
         Built by Matt
