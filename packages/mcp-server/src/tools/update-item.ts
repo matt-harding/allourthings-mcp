@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Backend } from "../backends/interface.js";
 
 export const updateItemInputSchema = z.object({
-  id: z.string().describe("Item ID to update"),
+  id: z.string().regex(/^[0-9a-f]{8}$/).describe("Item ID to update"),
   updates: z.record(z.unknown()).describe("Fields to update"),
 });
 

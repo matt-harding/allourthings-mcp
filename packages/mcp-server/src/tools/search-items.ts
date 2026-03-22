@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Backend } from "../backends/interface.js";
 
 export const searchItemsInputSchema = z.object({
-  query: z.string().describe("Search query — matches across all item fields"),
+  query: z.string().max(200).describe("Search query — matches across all item fields"),
 });
 
 export async function searchItems(

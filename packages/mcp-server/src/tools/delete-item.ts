@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Backend } from "../backends/interface.js";
 
 export const deleteItemInputSchema = z.object({
-  id: z.string().describe("Item ID to delete"),
+  id: z.string().regex(/^[0-9a-f]{8}$/).describe("Item ID to delete"),
 });
 
 export async function deleteItem(
