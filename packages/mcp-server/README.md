@@ -92,4 +92,4 @@ Custom fields are preserved as-is — add anything you like.
 
 ---
 
-[allourthings.io](https://allourthings.io) · [GitHub](https://github.com/allourthings/allourthings)
+[allourthings.io](https://allourthings.io)
