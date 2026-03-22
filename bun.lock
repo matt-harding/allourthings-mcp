@@ -9,10 +9,10 @@
       "name": "@allourthings/mcp-server",
       "version": "0.1.0",
       "bin": {
-        "allourthings-mcp-server": "./dist/index.js",
+        "allourthings-mcp-server": "dist/index.js",
       },
       "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.9.0",
+        "@modelcontextprotocol/sdk": "^1.27.1",
         "zod": "^3.24.0",
         "zod-to-json-schema": "^3.25.1",
       },
