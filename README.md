@@ -160,3 +160,9 @@ bun install
 | `task website:deploy` | Build and deploy to Cloudflare Pages |
 
 All tasks use `./dev-vault` by default. Override with `DATA_DIR=/your/path task <command>`.
+
+---
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

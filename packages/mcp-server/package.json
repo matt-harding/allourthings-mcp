@@ -2,6 +2,7 @@
   "name": "@allourthings/mcp-server",
   "version": "0.1.0",
   "description": "MCP server for All Our Things — AI-powered household inventory",
+  "license": "MIT",
   "type": "module",
   "files": ["dist"],
   "bin": {
