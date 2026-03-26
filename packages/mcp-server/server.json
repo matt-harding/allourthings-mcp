@@ -1,0 +1,38 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.allourthings/mcp-server",
+  "description": "AI-powered household inventory — query everything you own via natural language",
+  "repository": {
+    "url": "https://github.com/matt-harding/AllOurThings",
+    "source": "github"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@allourthings/mcp-server",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ALLOURTHINGS_DATA_DIR",
+          "description": "Directory where inventory data is stored. Defaults to ~/Documents/AllOurThings.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "named",
+          "name": "--data-dir",
+          "description": "Directory where inventory data is stored. Alternative to ALLOURTHINGS_DATA_DIR env var.",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

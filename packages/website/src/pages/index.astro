@@ -1,0 +1,181 @@
+---
+const title = "All Our Things";
+const description = "All Our Things is an AI-powered household inventory system. Ask natural language questions about everything you own — appliances, warranties, manuals, spending — from any MCP-compatible AI client. Your data stays on your own storage.";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://allourthings.io" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0a0a;
+        --surface: #111111;
+        --border: #222222;
+        --text: #e8e8e8;
+        --muted: #888888;
+        --accent: #d4a96a;
+        --font: 'Inter', system-ui, sans-serif;
+      }
+
+      html {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 6rem 1.5rem 4rem;
+      }
+
+      .eyebrow {
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 1.5rem;
+      }
+
+      h1 {
+        font-size: clamp(1.75rem, 5vw, 2.5rem);
+        font-weight: 600;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        margin-bottom: 1.5rem;
+      }
+
+      .description {
+        font-size: 1.0625rem;
+        color: var(--muted);
+        margin-bottom: 3rem;
+        max-width: 520px;
+      }
+
+      .install {
+        margin-bottom: 3rem;
+      }
+
+      .install h2 {
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.75rem;
+      }
+
+      .install pre {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        line-height: 1.6;
+      }
+
+      .install code {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        color: var(--text);
+      }
+
+      .npm-link {
+        display: inline-block;
+        margin-top: 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .npm-link:hover {
+        color: var(--accent);
+      }
+
+      .linkedin {
+        font-size: 0.875rem;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .linkedin:hover {
+        color: var(--accent);
+      }
+
+      footer {
+        padding: 2rem 1.5rem;
+        text-align: center;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">All Our Things</p>
+      <h1>Your household inventory,<br />understood by AI.</h1>
+      <p class="description">
+        Ask natural language questions about everything you own — appliances, warranties, manuals, spending.
+        Works with any MCP-compatible AI client. Your data stays on your own storage.
+      </p>
+
+      <div class="install">
+        <h2>Get started</h2>
+        <pre><code>{`{
+  "mcpServers": {
+    "allourthings": {
+      "command": "npx",
+      "args": ["-y", "@allourthings/mcp-server", "--data-dir", "~/Documents/AllOurThings"]
+    }
+  }
+}`}</code></pre>
+        <a class="npm-link" href="https://www.npmjs.com/package/@allourthings/mcp-server" target="_blank" rel="noopener">
+          @allourthings/mcp-server on npm &rarr;
+        </a>
+      </div>
+
+      <a class="linkedin" href="https://www.linkedin.com/in/matthewrharding/" target="_blank" rel="noopener">
+        Built by Matt
+      </a>
+    </main>
+
+    <footer>
+      &copy; {new Date().getFullYear()} All Our Things
+    </footer>
+  </body>
+</html>

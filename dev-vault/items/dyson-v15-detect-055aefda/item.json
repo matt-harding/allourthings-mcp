@@ -1,0 +1,20 @@
+{
+  "name": "Dyson V15 Detect",
+  "category": "appliance",
+  "brand": "Dyson",
+  "model": "V15 Detect Absolute",
+  "purchase_date": "2025-05-31",
+  "purchase_price": 599,
+  "currency": "GBP",
+  "retailer": "Dyson",
+  "warranty_expires": "2027-05-31",
+  "location": "utility room",
+  "tags": [
+    "hoover",
+    "cordless"
+  ],
+  "notes": "Filter washed monthly. Bin emptied weekly.",
+  "id": "055aefda",
+  "created_at": "2026-03-17T19:17:22.133Z",
+  "updated_at": "2026-03-17T19:17:22.133Z"
+}

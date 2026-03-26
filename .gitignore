@@ -1,0 +1,9 @@
+node_modules/
+.env
+dist/
+.DS_Store
+
+# Local dev vault (created by seed script / task dev)
+dev-vault/
+package-lock.json
+package-lock.json

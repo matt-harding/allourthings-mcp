@@ -1,0 +1,19 @@
+{
+  "name": "Meaco 12L Dehumidifier",
+  "category": "appliance",
+  "brand": "Meaco",
+  "model": "Meaco12L Low Energy",
+  "purchase_date": "2025-04-01",
+  "purchase_price": 189,
+  "currency": "GBP",
+  "retailer": "Amazon",
+  "warranty_expires": "2027-04-01",
+  "location": "bedroom",
+  "tags": [
+    "appliance",
+    "air quality"
+  ],
+  "id": "dc7b89f9",
+  "created_at": "2026-03-17T19:17:22.133Z",
+  "updated_at": "2026-03-17T19:17:22.133Z"
+}
