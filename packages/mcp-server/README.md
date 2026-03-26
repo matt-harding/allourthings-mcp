@@ -76,11 +76,11 @@ Attachments (manuals, receipts, photos) sit alongside the item JSON. The vault i
 
 ## Configuration
 
-| Method | Example |
-|---|---|
-| `--data-dir` arg *(recommended)* | `--data-dir ~/Documents/AllOurThings` |
-| `ALLOURTHINGS_DATA_DIR` env var | `ALLOURTHINGS_DATA_DIR=~/Documents/AllOurThings` |
-| Default (no config needed) | `~/Documents/AllOurThings` |
+The `--data-dir` arg controls where your inventory is stored. It defaults to `~/Documents/AllOurThings` if omitted. To use a different location, update the path in your MCP client config:
+
+```json
+"args": ["-y", "@allourthings/mcp-server", "--data-dir", "/path/to/your/vault"]
+```
 
 ## Item schema
 
