@@ -17,11 +17,20 @@
       },
       "environmentVariables": [
         {
-          "name": "CATALOG_PATH",
-          "description": "Path to the catalog JSON file. Defaults to ~/Library/Mobile Documents/com~apple~CloudDocs/AllOurThings/catalog.json on macOS.",
+          "name": "ALLOURTHINGS_DATA_DIR",
+          "description": "Directory where inventory data is stored. Defaults to ~/Documents/AllOurThings.",
           "isRequired": false,
           "format": "string",
           "isSecret": false
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "named",
+          "name": "--data-dir",
+          "description": "Directory where inventory data is stored. Alternative to ALLOURTHINGS_DATA_DIR env var.",
+          "isRequired": false,
+          "format": "string"
         }
       ]
     }

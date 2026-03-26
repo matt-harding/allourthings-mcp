@@ -34,25 +34,28 @@ packages/
 - **MCP SDK:** `@modelcontextprotocol/sdk`
 - **Validation:** Zod + `zod-to-json-schema` for tool input schemas
 - **Package manager:** Bun workspaces
-- **Website:** Astro 4 (static), deployed to Cloudflare Pages
+- **Website:** Astro 6 (static), deployed to Cloudflare Pages
 
 ## Key commands
 
 Via Taskfile (install Task: `brew install go-task`):
 
 ```bash
-task test            # Seed catalog + open MCP Inspector — fastest test loop
-task seed:reset      # Clear and re-seed catalog.json with 12 test items
-task inspect         # Open MCP Inspector in dev mode
-task dev             # Start MCP server in watch mode (for real AI client)
+task dev             # Seed vault + open MCP Inspector — fastest test loop
+task dev:mcp         # Start MCP server in watch mode (for real AI client)
+task inspect         # Open MCP Inspector (no seed)
+task seed            # Append test items to dev vault
+task seed:reset      # Clear and re-seed dev vault with test items
 task build           # Compile MCP server to dist/
 task typecheck       # tsc --noEmit
+task test:run        # Run automated tests
 task website:dev     # Start website dev server
 task website:build   # Build website for production
 task website:deploy  # Build and deploy website to Cloudflare Pages
 ```
 
-All tasks default to `CATALOG_PATH=./catalog.json` — safe for dev, never touches the real iCloud catalog.
+All tasks default to `DATA_DIR=./dev-vault` — safe for dev, never touches the real data directory.
+Override: `DATA_DIR=/your/path task <command>`
 
 Directly via Bun (from `packages/mcp-server/`):
 
@@ -60,7 +63,7 @@ Directly via Bun (from `packages/mcp-server/`):
 bun run dev
 bun run build
 bun run typecheck
-bun scripts/seed.ts --reset   # seed with CATALOG_PATH env set
+bun scripts/seed.ts --data-dir ./dev-vault --reset
 ```
 
 ## Architecture
@@ -73,11 +76,11 @@ When adding a new backend: implement `Backend`, add auto-detection logic to `ind
 
 ### Storage
 
-Default catalog path: `~/Library/Mobile Documents/com~apple~CloudDocs/AllOurThings/catalog.json` (iCloud Drive).
+Default data directory: `~/Documents/AllOurThings` (cross-platform).
 
-Override with `CATALOG_PATH` env var.
+Override with `ALLOURTHINGS_DATA_DIR` env var or `--data-dir` CLI flag.
 
-The filesystem backend stores all items as a single JSON array. On every write it loads the full array, mutates, and saves. Fine for personal inventory sizes.
+Each item is stored as a directory under `<data-dir>/items/<slug>-<id>/item.json`. Malformed item files are silently skipped on read.
 
 ### Item schema
 
@@ -101,7 +104,7 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 | Epic | Phase | Status |
 |---|---|---|
 | 1 — MCP Server MVP | 1 | **Complete** — CRUD tools + filesystem backend done |
-| 2 — Publish & Distribute | 1 | Not started (npm publish, MCP Registry) |
+| 2 — Publish & Distribute | 1 | **In progress** — npm published, MCP Registry pending |
 | 2.5 — OpenClaw Skill | 1–3 | Not started (SKILL.md, ClawHub publish, cron alerts) |
 | 3 — Notion Backend | 2 | Not started |
 | 4 — MCP App UIs | 3 | Not started (Browse UI, Dashboard UI) |
@@ -113,8 +116,7 @@ Fields: Story, Epic, Phase, Priority (Must/Should/Could), Size (S/M/L/XL/Ongoing
 
 ### Upcoming priorities (Phase 1 remaining)
 
-- Publish to npm as `@allourthings/mcp-server`
-- Create `server.json` and publish to MCP Registry
+- Publish `server.json` to MCP Registry (`io.allourthings/mcp-server`) — PR #3 open
 - Write `SKILL.md` + publish to ClawHub marketplace
 
 ### Phase 2 next
