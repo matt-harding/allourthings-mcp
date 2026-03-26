@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.matt-harding/allourthings",
+  "name": "io.allourthings/mcp-server",
   "description": "AI-powered household inventory — query everything you own via natural language",
   "repository": {
     "url": "https://github.com/matt-harding/AllOurThings",

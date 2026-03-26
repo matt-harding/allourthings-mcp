@@ -1,7 +1,7 @@
 {
   "name": "@allourthings/mcp-server",
   "version": "0.1.1",
-  "mcpName": "io.github.matt-harding/allourthings",
+  "mcpName": "io.allourthings/mcp-server",
   "description": "MCP server for All Our Things — AI-powered household inventory",
   "license": "MIT",
   "repository": {
