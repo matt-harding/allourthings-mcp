@@ -1,0 +1,38 @@
+{
+  "description": "Expected results when reading test-fixtures/catalog with a conforming implementation.",
+  "readable_items": 3,
+  "skipped_items": 1,
+  "items": [
+    {
+      "id": "00000001",
+      "name": "Minimal Item"
+    },
+    {
+      "id": "00000002",
+      "name": "Full Item",
+      "category": "electronics",
+      "purchase_price": 649,
+      "purchase_date": "2025-02-10",
+      "warranty_expires": "2027-02-10",
+      "attachments_count": 2
+    },
+    {
+      "id": "00000003",
+      "name": "Custom Fields Item",
+      "passthrough": {
+        "serial_number": "ABC123XYZ",
+        "rack_unit": 2,
+        "custom_bool": true
+      }
+    }
+  ],
+  "slug_vectors": [
+    { "input": "Bosch Washing Machine",                              "output": "bosch-washing-machine" },
+    { "input": "PlayStation 5",                                      "output": "playstation-5" },
+    { "input": "100% Wool Blanket",                                  "output": "100-wool-blanket" },
+    { "input": "  Spaces  ",                                         "output": "spaces" },
+    { "input": "A & B -- C",                                         "output": "a-b-c" },
+    { "input": "MacBook Pro 14\"",                                    "output": "macbook-pro-14" },
+    { "input": "A very long name that exceeds fifty characters totally", "output": "a-very-long-name-that-exceeds-fifty-characters-tot" }
+  ]
+}
