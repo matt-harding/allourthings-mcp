@@ -3,15 +3,15 @@
   "name": "io.allourthings/mcp-server",
   "description": "AI-powered household inventory — query everything you own via natural language",
   "repository": {
-    "url": "https://github.com/matt-harding/AllOurThings",
+    "url": "https://github.com/matt-harding/allourthings-mcp",
     "source": "github"
   },
-  "version": "0.1.1",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@allourthings/mcp-server",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
