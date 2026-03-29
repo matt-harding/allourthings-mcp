@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/matt-harding/AllOurThings.git"
+    "url": "https://github.com/matt-harding/allourthings-mcp.git"
   },
   "type": "module",
   "files": [
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "@allourthings/core": "^0.1.0",
     "zod": "^3.24.0",
     "zod-to-json-schema": "^3.25.1"
   },

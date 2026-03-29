@@ -7,5 +7,8 @@ dist/
 dev-vault/
 package-lock.json
 
+# Rust build artifacts
+target/
+
 # Local AI context — kept off source control (contains internal notes)
 CLAUDE.md

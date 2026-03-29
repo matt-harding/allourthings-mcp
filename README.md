@@ -20,8 +20,8 @@ Ask your AI assistant natural language questions about everything you own — ap
 | Platform | AI assistant | Add / browse inventory |
 |---|---|---|
 | macOS / Windows / Linux | ✅ Via Claude Desktop + MCP server | ✅ |
-| iOS | 🔜 iOS app coming (Epic 6) | 🔜 iOS app coming |
-| Android | 🔜 Planned (Epic 9) | 🔜 Planned |
+| iOS | 🔜 Coming soon | 🔜 iOS app coming |
+| Android | 🔜 Planned | 🔜 Planned |
 
 The MCP server requires a desktop MCP client (Claude Desktop, Cursor, etc.). Mobile AI assistant access depends on MCP support arriving in mobile clients — the iOS app will handle add/browse in the meantime.
 
