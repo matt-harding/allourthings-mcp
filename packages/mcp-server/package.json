@@ -1,6 +1,6 @@
 {
   "name": "@allourthings/mcp-server",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "mcpName": "io.allourthings/mcp-server",
   "description": "MCP server for All Our Things — AI-powered household inventory",
   "license": "MIT",
