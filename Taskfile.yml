@@ -2,7 +2,6 @@ version: "3"
 
 vars:
   SERVER: packages/mcp-server
-  WEBSITE: packages/website
   # Default vault path for local dev/testing.
   # Override: DATA_DIR=/your/path task <command>
   DATA_DIR: "{{.DATA_DIR | default \"./dev-vault\"}}"
@@ -17,24 +16,6 @@ tasks:
     env:
       ALLOURTHINGS_DATA_DIR: "{{.DATA_DIR}}"
     cmd: bun run dev
-
-  website:dev:
-    desc: Start website dev server
-    dir: "{{.WEBSITE}}"
-    cmd: bun run dev
-
-  website:build:
-    desc: Build website for production
-    dir: "{{.WEBSITE}}"
-    cmd: bun run build
-
-  website:deploy:
-    desc: Build and deploy website to Cloudflare Pages
-    dir: "{{.WEBSITE}}"
-    dotenv: ["../../.env"]
-    cmds:
-      - task: website:build
-      - bunx wrangler pages deploy dist --project-name allourthings
 
   build:
     desc: Compile MCP server to dist/
