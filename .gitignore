@@ -12,3 +12,5 @@ target/
 
 # Local AI context — kept off source control (contains internal notes)
 CLAUDE.md
+.mcpregistry_github_token
+.mcpregistry_registry_token
