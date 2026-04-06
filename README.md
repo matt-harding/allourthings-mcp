@@ -1,4 +1,4 @@
-# All Our Things
+# AllOurThings
 
 > Your stuff, your data, your choice of storage. AI-powered answers about everything you own.
 

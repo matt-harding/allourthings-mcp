@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Backend } from "../backends/interface.js";
 
 export const getItemInputSchema = z.object({
-  id_or_name: z.string().describe("Item ID or name (fuzzy match)"),
+  id_or_name: z.string().describe("Item ID or name. Tries exact ID match first, then exact name match, then substring match."),
 });
 
 export async function getItem(

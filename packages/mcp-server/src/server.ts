@@ -14,6 +14,7 @@ import { searchItems, searchItemsInputSchema } from "./tools/search-items.js";
 import { addAttachment, addAttachmentInputSchema } from "./tools/add-attachment.js";
 import { getAttachment, getAttachmentInputSchema } from "./tools/get-attachment.js";
 import { deleteAttachment, deleteAttachmentInputSchema } from "./tools/delete-attachment.js";
+import { attachFromUrl, attachFromUrlInputSchema } from "./tools/attach-from-url.js";
 
 export function createServer(backend: Backend) {
   const server = new Server(
@@ -60,13 +61,18 @@ export function createServer(backend: Backend) {
       },
       {
         name: "get_attachment",
-        description: "Retrieve an attachment's contents as a base64-encoded string",
+        description: "Retrieve an attachment's contents as a base64-encoded string. Useful for checking an attachment exists. Note: binary files like PDFs cannot be read or displayed directly.",
         inputSchema: zodToJsonSchema(getAttachmentInputSchema),
       },
       {
         name: "delete_attachment",
         description: "Delete an attachment from an item",
         inputSchema: zodToJsonSchema(deleteAttachmentInputSchema),
+      },
+      {
+        name: "attach_from_url",
+        description: "Download a file from a URL and attach it to an item (e.g. a PDF manual or warranty document)",
+        inputSchema: zodToJsonSchema(attachFromUrlInputSchema),
       },
     ],
   }));
@@ -93,6 +99,8 @@ export function createServer(backend: Backend) {
         return getAttachment(backend, getAttachmentInputSchema.parse(args));
       case "delete_attachment":
         return deleteAttachment(backend, deleteAttachmentInputSchema.parse(args));
+      case "attach_from_url":
+        return attachFromUrl(backend, attachFromUrlInputSchema.parse(args));
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

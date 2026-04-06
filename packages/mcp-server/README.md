@@ -6,7 +6,7 @@ An [MCP server](https://modelcontextprotocol.io) that gives your AI assistant na
 
 ## Requirements
 
-**Desktop only** — macOS, Windows, or Linux with [Claude Desktop](https://claude.ai/download) or another MCP-compatible client. The MCP server runs as a local process; mobile AI assistant access is not currently supported. An iOS app for add/browse on mobile is in development.
+**Desktop only** — macOS, Windows, or Linux with [Claude Desktop](https://claude.ai/download) or another MCP-compatible client. The MCP server runs as a local process.
 
 ## Setup
 
@@ -45,6 +45,8 @@ Once connected, ask your AI assistant things like:
 - *"What's in the kitchen?"*
 - *"When does my TV warranty expire?"*
 - *"Search for anything Samsung"*
+- *"Find and attach the manual for my Dyson V15"*
+- *"Attach this receipt to my MacBook"*
 
 ## Tools
 
@@ -56,6 +58,10 @@ Once connected, ask your AI assistant things like:
 | `update_item` | Update fields on an existing item |
 | `delete_item` | Delete an item by ID |
 | `search_items` | Full-text search across all item fields |
+| `add_attachment` | Attach a file (manual, receipt, photo, warranty) to an item |
+| `attach_from_url` | Download a file from a URL and attach it to an item |
+| `get_attachment` | Retrieve an attachment's contents |
+| `delete_attachment` | Remove an attachment from an item |
 
 ## Vault structure
 
