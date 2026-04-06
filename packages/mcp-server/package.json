@@ -1,6 +1,6 @@
 {
   "name": "@allourthings/mcp-server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "mcpName": "io.allourthings/mcp-server",
   "description": "MCP server for All Our Things — AI-powered household inventory",
   "license": "MIT",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@allourthings/core": "^0.1.0",
+    "@allourthings/core": "^0.1.10",
     "zod": "^3.24.0",
     "zod-to-json-schema": "^3.25.1"
   },
