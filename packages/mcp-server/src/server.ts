@@ -11,6 +11,9 @@ import { listItems, listItemsInputSchema } from "./tools/list-items.js";
 import { updateItem, updateItemInputSchema } from "./tools/update-item.js";
 import { deleteItem, deleteItemInputSchema } from "./tools/delete-item.js";
 import { searchItems, searchItemsInputSchema } from "./tools/search-items.js";
+import { addAttachment, addAttachmentInputSchema } from "./tools/add-attachment.js";
+import { getAttachment, getAttachmentInputSchema } from "./tools/get-attachment.js";
+import { deleteAttachment, deleteAttachmentInputSchema } from "./tools/delete-attachment.js";
 
 export function createServer(backend: Backend) {
   const server = new Server(
@@ -50,6 +53,21 @@ export function createServer(backend: Backend) {
         description: "Full-text search across all item fields",
         inputSchema: zodToJsonSchema(searchItemsInputSchema),
       },
+      {
+        name: "add_attachment",
+        description: "Attach a file (manual, receipt, photo, warranty, etc.) to an item. File contents must be base64-encoded.",
+        inputSchema: zodToJsonSchema(addAttachmentInputSchema),
+      },
+      {
+        name: "get_attachment",
+        description: "Retrieve an attachment's contents as a base64-encoded string",
+        inputSchema: zodToJsonSchema(getAttachmentInputSchema),
+      },
+      {
+        name: "delete_attachment",
+        description: "Delete an attachment from an item",
+        inputSchema: zodToJsonSchema(deleteAttachmentInputSchema),
+      },
     ],
   }));
 
@@ -69,6 +87,12 @@ export function createServer(backend: Backend) {
         return deleteItem(backend, deleteItemInputSchema.parse(args));
       case "search_items":
         return searchItems(backend, searchItemsInputSchema.parse(args));
+      case "add_attachment":
+        return addAttachment(backend, addAttachmentInputSchema.parse(args));
+      case "get_attachment":
+        return getAttachment(backend, getAttachmentInputSchema.parse(args));
+      case "delete_attachment":
+        return deleteAttachment(backend, deleteAttachmentInputSchema.parse(args));
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

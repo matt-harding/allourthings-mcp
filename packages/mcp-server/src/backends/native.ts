@@ -41,4 +41,16 @@ export class NativeBackend implements Backend {
   async searchItems(query: string): Promise<Item[]> {
     return this.store.searchItems(query) as Item[];
   }
+
+  async addAttachment(itemId: string, filename: string, kind: string, data: Buffer, label?: string): Promise<Item> {
+    return this.store.addAttachment(itemId, filename, kind, data, label ?? null) as Item;
+  }
+
+  async getAttachment(itemId: string, filename: string): Promise<Buffer> {
+    return this.store.getAttachment(itemId, filename) as Buffer;
+  }
+
+  async deleteAttachment(itemId: string, filename: string): Promise<Item | null> {
+    return this.store.deleteAttachment(itemId, filename) as Item | null;
+  }
 }
