@@ -12,6 +12,10 @@ import { writeFile, mkdir, readdir, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const { JsCatalogStore } = require("@allourthings/core");
 
 const argIndex = process.argv.indexOf("--data-dir");
 const dataDir =
@@ -234,10 +238,52 @@ async function main() {
     await writeFile(join(dir, "item.json"), JSON.stringify(item, null, 2));
   }
 
+  // Add sample attachments to a few items via the native store so the files
+  // and metadata are written correctly.
+  const store = new JsCatalogStore(dataDir);
+  const attachmentSeeds: Array<{ name: string; filename: string; kind: string; label: string; content: string }> = [
+    {
+      name: "Bosch Serie 6 Washing Machine",
+      filename: "manual.pdf",
+      kind: "manual",
+      label: "User Manual",
+      content: "%PDF-1.4\n% Bosch WGG244A9GB — placeholder manual for dev vault",
+    },
+    {
+      name: "Bosch Serie 6 Washing Machine",
+      filename: "receipt.pdf",
+      kind: "receipt",
+      label: "John Lewis Receipt",
+      content: "%PDF-1.4\n% Receipt — John Lewis — £649 — placeholder for dev vault",
+    },
+    {
+      name: "Samsung 65\" QLED TV",
+      filename: "warranty.pdf",
+      kind: "warranty",
+      label: "Samsung Warranty Card",
+      content: "%PDF-1.4\n% Samsung warranty — placeholder for dev vault",
+    },
+    {
+      name: "Apple MacBook Pro 14\"",
+      filename: "receipt.pdf",
+      kind: "receipt",
+      label: "Apple Store Receipt",
+      content: "%PDF-1.4\n% Apple Store receipt — £1999 — placeholder for dev vault",
+    },
+  ];
+
+  for (const seed of attachmentSeeds) {
+    const item = newItems.find((i) => i.name === seed.name);
+    if (!item) continue;
+    store.addAttachment(item.id, seed.filename, seed.kind, Buffer.from(seed.content), seed.label);
+  }
+
   console.log(`\nSeeded ${newItems.length} items:`);
   for (const item of newItems) {
     const slug = toSlug(item.name);
-    console.log(`  + ${slug}-${item.id}/`);
+    const attachments = attachmentSeeds.filter((a) => a.name === item.name);
+    const suffix = attachments.length ? `  [${attachments.map((a) => a.filename).join(", ")}]` : "";
+    console.log(`  + ${slug}-${item.id}/${suffix}`);
   }
   console.log(`\nVault: ${dataDir} (${existingCount + newItems.length} total items)`);
 }
