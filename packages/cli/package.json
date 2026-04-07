@@ -12,7 +12,7 @@
     "dist"
   ],
   "bin": {
-    "aot": "dist/index.js"
+    "allourthings": "dist/index.js"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node",

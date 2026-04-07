@@ -13,8 +13,6 @@ Ask your AI assistant natural language questions about everything you own — ap
 | [`packages/mcp-server`](./packages/mcp-server) | [`@allourthings/mcp-server`](https://www.npmjs.com/package/@allourthings/mcp-server) | MCP server — connects your inventory to Claude Desktop and other MCP clients |
 | [`packages/cli`](./packages/cli) | [`@allourthings/cli`](https://www.npmjs.com/package/@allourthings/cli) | CLI — manage your inventory from the terminal |
 
-The website lives in a separate repo: [allourthings-website](https://github.com/matt-harding/allourthings-website).
-
 ---
 
 ## Platform support
@@ -76,21 +74,21 @@ npm install -g @allourthings/cli
 ### Commands
 
 ```bash
-aot search <query>                          # full-text search across all fields
-aot list [--category <c>] [-l <loc>] [-t <tag>]  # list items, optionally filtered
-aot get <id-or-name>                        # show full item detail
-aot add <name> [options]                    # add a new item
-aot update <id> [options]                   # update item fields
-aot delete <id>                             # delete an item (prompts for confirmation)
+allourthings search <query>                          # full-text search across all fields
+allourthings list [--category <c>] [-l <loc>] [-t <tag>]  # list items, optionally filtered
+allourthings get <id-or-name>                        # show full item detail
+allourthings add <name> [options]                    # add a new item
+allourthings update <id> [options]                   # update item fields
+allourthings delete <id>                             # delete an item (prompts for confirmation)
 ```
 
 **Attachment management:**
 
 ```bash
-aot attach add <item-id> <file>             # attach a local file to an item
-aot attach url <item-id> <url>              # download a file and attach it
-aot attach get <item-id> <filename>         # save an attachment to disk
-aot attach rm  <item-id> <filename>         # delete an attachment
+allourthings attach add <item-id> <file>             # attach a local file to an item
+allourthings attach url <item-id> <url>              # download a file and attach it
+allourthings attach get <item-id> <filename>         # save an attachment to disk
+allourthings attach rm  <item-id> <filename>         # delete an attachment
 ```
 
 **`add` and `update` options:**
@@ -122,22 +120,22 @@ aot attach rm  <item-id> <filename>         # delete an attachment
 
 ```bash
 # Add an item
-aot add "Bosch Washing Machine" --brand Bosch --model "WGG244A9GB" \
+allourthings add "Bosch Washing Machine" --brand Bosch --model "WGG244A9GB" \
   --category appliance --location kitchen \
   --purchase-date 2024-01-15 --price 649 --currency GBP \
   --warranty 2026-01-15 --retailer "John Lewis"
 
 # Search and pipe to jq
-aot search "warranty" --json | jq '[.[] | {name, warranty_expires}]'
+allourthings search "warranty" --json | jq '[.[] | {name, warranty_expires}]'
 
 # Attach a manual
-aot attach add 6164c373 ~/Downloads/bosch-manual.pdf --label "User manual"
+allourthings attach add 6164c373 ~/Downloads/bosch-manual.pdf --label "User manual"
 
 # Update a field
-aot update 6164c373 --warranty 2027-01-15
+allourthings update 6164c373 --warranty 2027-01-15
 
 # Use a custom data directory
-aot --data-dir ~/Dropbox/AllOurThings list
+allourthings --data-dir ~/Dropbox/AllOurThings list
 ```
 
 ---

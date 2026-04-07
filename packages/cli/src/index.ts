@@ -48,10 +48,10 @@ function die(msg: string): never {
 const program = new Command();
 
 program
-  .name("aot")
+  .name("allourthings")
   .description("AllOurThings — manage your personal inventory from the terminal.")
   .version("0.1.0")
-  .option("--data-dir <path>", "path to inventory data directory")
+  .option("--data-dir <path>", "path to inventory data directory (default: ~/Documents/AllOurThings)")
   .option("--json", "output raw JSON");
 
 // ── search ────────────────────────────────────────────────────────────────────
