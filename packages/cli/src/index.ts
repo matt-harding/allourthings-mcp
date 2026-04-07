@@ -10,6 +10,7 @@ import { formatItem, formatItems, out, type Item } from "./format.js";
 
 const require = createRequire(import.meta.url);
 const { JsCatalogStore } = require("@allourthings/core");
+const { version } = require("../package.json");
 
 function resolveDataDir(): string {
   const argv = process.argv;
@@ -50,7 +51,7 @@ const program = new Command();
 program
   .name("allourthings")
   .description("AllOurThings — manage your personal inventory from the terminal.")
-  .version("0.1.0")
+  .version(version)
   .option("--data-dir <path>", "path to inventory data directory (default: ~/Documents/AllOurThings)")
   .option("--json", "output raw JSON");
 
