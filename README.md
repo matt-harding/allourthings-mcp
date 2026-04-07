@@ -1,8 +1,8 @@
 # AllOurThings
 
-> Your stuff, your data, your choice of storage. AI-powered answers about everything you own.
+> Your things, understood by AI.
 
-Ask your AI assistant natural language questions about everything you own — appliances, furniture, subscriptions, warranties, manuals, receipts, and more. Your data stays on your own device.
+AllOurThings is an inventory system that works the way you do. Catalog anything you like from your home appliances to your Pokémon cards — then ask plain-English questions and get instant answers.
 
 **Website:** [allourthings.io](https://allourthings.io)
 
@@ -12,18 +12,6 @@ Ask your AI assistant natural language questions about everything you own — ap
 |---|---|---|
 | [`packages/mcp-server`](./packages/mcp-server) | [`@allourthings/mcp-server`](https://www.npmjs.com/package/@allourthings/mcp-server) | MCP server — connects your inventory to Claude Desktop and other MCP clients |
 | [`packages/cli`](./packages/cli) | [`@allourthings/cli`](https://www.npmjs.com/package/@allourthings/cli) | CLI — manage your inventory from the terminal |
-
----
-
-## Platform support
-
-| Platform | AI assistant | Terminal (CLI) | Add / browse inventory |
-|---|---|---|---|
-| macOS / Windows / Linux | ✅ Via Claude Desktop + MCP server | ✅ | ✅ |
-| iOS | 🔜 Coming soon | — | 🔜 iOS app coming |
-| Android | 🔜 Planned | — | 🔜 Planned |
-
-The MCP server requires a desktop MCP client (Claude Desktop, Cursor, etc.). Mobile AI assistant access depends on MCP support arriving in mobile clients — the iOS app will handle add/browse in the meantime.
 
 ---
 
@@ -59,6 +47,68 @@ Restart Claude Desktop. Your inventory vault will be created automatically on fi
 
 ---
 
+## How it works
+
+The MCP server exposes your inventory to any MCP-compatible AI client via 10 tools:
+
+| Tool | Description |
+|---|---|
+| `add_item` | Add a new item to your inventory |
+| `get_item` | Retrieve an item by ID or name |
+| `list_items` | List all items, optionally filtered by category, location, or tags |
+| `update_item` | Update fields on an existing item |
+| `delete_item` | Delete an item by ID |
+| `search_items` | Full-text search across all item fields |
+| `add_attachment` | Attach a file (manual, receipt, photo, warranty) to an item |
+| `get_attachment` | Retrieve an attachment as base64 |
+| `delete_attachment` | Remove an attachment from an item |
+| `attach_from_url` | Download a file from a URL and attach it to an item |
+
+---
+
+## Data
+
+### Vault structure
+
+Your inventory lives in a **vault** — a plain directory on your filesystem. Each item gets its own folder:
+
+```
+~/Documents/AllOurThings/
+  items/
+    dyson-v15-detect-a1b2c3d4/
+      item.json
+      manual.pdf
+      receipt.jpg
+    samsung-65-qled-tv-b5c6d7e8/
+      item.json
+      warranty.pdf
+```
+
+Attachments (manuals, receipts, photos) sit alongside the item JSON. You can browse and edit the vault directly in Finder or File Explorer.
+
+### Item schema
+
+Every item has required fields (`id`, `name`, `created_at`, `updated_at`) and well-known optional fields:
+
+`category` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
+
+The `attachments` field links PDFs and images stored in the item's folder:
+
+```json
+{
+  "attachments": [
+    { "filename": "manual.pdf",  "type": "manual"   },
+    { "filename": "receipt.jpg", "type": "receipt"  },
+    { "filename": "photo.jpg",   "type": "photo"    }
+  ]
+}
+```
+
+You can also add any custom fields you like — they are preserved as-is.
+
+
+---
+
 ## CLI
 
 A standalone terminal tool for power users and scripting. Works on macOS, Windows, and Linux. No AI client required.
@@ -70,6 +120,7 @@ npx @allourthings/cli list
 # Or install globally
 npm install -g @allourthings/cli
 ```
+
 
 ### Commands
 
@@ -142,79 +193,6 @@ allourthings --data-dir ~/Dropbox/AllOurThings list
 
 ---
 
-## How it works
-
-The MCP server exposes your inventory to any MCP-compatible AI client via 10 tools:
-
-| Tool | Description |
-|---|---|
-| `add_item` | Add a new item to your inventory |
-| `get_item` | Retrieve an item by ID or name |
-| `list_items` | List all items, optionally filtered by category, location, or tags |
-| `update_item` | Update fields on an existing item |
-| `delete_item` | Delete an item by ID |
-| `search_items` | Full-text search across all item fields |
-| `add_attachment` | Attach a file (manual, receipt, photo, warranty) to an item |
-| `get_attachment` | Retrieve an attachment as base64 |
-| `delete_attachment` | Remove an attachment from an item |
-| `attach_from_url` | Download a file from a URL and attach it to an item |
-
----
-
-## Data
-
-### Vault structure
-
-Your inventory lives in a **vault** — a plain directory on your filesystem. Each item gets its own folder:
-
-```
-~/Documents/AllOurThings/
-  items/
-    dyson-v15-detect-a1b2c3d4/
-      item.json
-      manual.pdf
-      receipt.jpg
-    samsung-65-qled-tv-b5c6d7e8/
-      item.json
-      warranty.pdf
-```
-
-Attachments (manuals, receipts, photos) sit alongside the item JSON. You can browse and edit the vault directly in Finder or File Explorer.
-
-### Item schema
-
-Every item has required fields (`id`, `name`, `created_at`, `updated_at`) and well-known optional fields:
-
-`category` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
-
-The `attachments` field links PDFs and images stored in the item's folder:
-
-```json
-{
-  "attachments": [
-    { "filename": "manual.pdf",  "type": "manual"   },
-    { "filename": "receipt.jpg", "type": "receipt"  },
-    { "filename": "photo.jpg",   "type": "photo"    }
-  ]
-}
-```
-
-You can also add any custom fields you like — they are preserved as-is.
-
-### Configuration
-
-| Method | Example |
-|---|---|
-| `--data-dir` arg *(recommended)* | `--data-dir ~/Documents/AllOurThings` |
-| `ALLOURTHINGS_DATA_DIR` env var | `ALLOURTHINGS_DATA_DIR=~/Documents/AllOurThings` |
-| Default | `~/Documents/AllOurThings` |
-
-The `--data-dir` arg is the recommended approach — it's visible directly in your MCP client config.
-
-> **macOS note:** Claude Desktop spawns the MCP server as a subprocess, so macOS file access prompts may not appear when the server first tries to write to your chosen vault location. If `add_item` hangs silently, the vault directory is likely being blocked by macOS privacy controls. Current workaround: use `~/Desktop/AllOurThings` (Desktop access is granted to Claude Desktop by default) or add `bun` (`/opt/homebrew/bin/bun`) to Full Disk Access in System Settings → Privacy & Security. A proper installer that handles permissions correctly is planned.
-
----
-
 ## Development
 
 ### Prerequisites
@@ -233,18 +211,18 @@ bun install
 | Task | Description |
 |---|---|
 | `task dev` | Seed vault + open MCP Inspector — fastest way to test |
+| `task dev:mcp` | Start MCP server in watch mode (stdio) |
 | `task test:run` | Run automated tests |
 | `task seed` | Append test items to dev vault |
 | `task seed:reset` | Clear dev vault and re-seed |
 | `task inspect` | Open MCP Inspector (dev mode, no build required) |
-| `task inspect:prod` | Build, then open MCP Inspector against dist |
+| `task inspect:prod` | Build, then open MCP Inspector against compiled dist |
 | `task build` | Compile MCP server to dist/ |
+| `task build:cli` | Compile CLI to dist/ |
+| `task cli -- <args>` | Run CLI from source against dev vault, e.g. `task cli -- list` |
 | `task typecheck` | Run TypeScript type checking |
 | `task clean` | Remove dist/ |
 | `task clean:vault` | Delete local dev vault |
-| `task website:dev` | Start website dev server |
-| `task website:build` | Build website for production |
-| `task website:deploy` | Build and deploy to Cloudflare Pages |
 
 All tasks use `./dev-vault` by default. Override with `DATA_DIR=/your/path task <command>`.
 
