@@ -1,29 +1,17 @@
 # AllOurThings
 
-> Your stuff, your data, your choice of storage. AI-powered answers about everything you own.
+> Your things, understood by AI.
 
-Ask your AI assistant natural language questions about everything you own — appliances, furniture, subscriptions, warranties, manuals, receipts, and more. Your data stays on your own device.
+AllOurThings is an inventory system that works the way you do. Catalog anything you like from your home appliances to your Pokémon cards — then ask plain-English questions and get instant answers.
 
 **Website:** [allourthings.io](https://allourthings.io)
 
 ## Packages
 
-| Package | Description |
-|---|---|
-| [`packages/mcp-server`](./packages/mcp-server) | TypeScript MCP server — the core of the system |
-| [`packages/website`](./packages/website) | Astro static site — allourthings.io |
-
----
-
-## Platform support
-
-| Platform | AI assistant | Add / browse inventory |
+| Package | npm | Description |
 |---|---|---|
-| macOS / Windows / Linux | ✅ Via Claude Desktop + MCP server | ✅ |
-| iOS | 🔜 Coming soon | 🔜 iOS app coming |
-| Android | 🔜 Planned | 🔜 Planned |
-
-The MCP server requires a desktop MCP client (Claude Desktop, Cursor, etc.). Mobile AI assistant access depends on MCP support arriving in mobile clients — the iOS app will handle add/browse in the meantime.
+| [`packages/mcp-server`](./packages/mcp-server) | [`@allourthings/mcp-server`](https://www.npmjs.com/package/@allourthings/mcp-server) | MCP server — connects your inventory to Claude Desktop and other MCP clients |
+| [`packages/cli`](./packages/cli) | [`@allourthings/cli`](https://www.npmjs.com/package/@allourthings/cli) | CLI — manage your inventory from the terminal |
 
 ---
 
@@ -61,7 +49,7 @@ Restart Claude Desktop. Your inventory vault will be created automatically on fi
 
 ## How it works
 
-The MCP server exposes your inventory to any MCP-compatible AI client via six tools:
+The MCP server exposes your inventory to any MCP-compatible AI client via 10 tools:
 
 | Tool | Description |
 |---|---|
@@ -71,6 +59,10 @@ The MCP server exposes your inventory to any MCP-compatible AI client via six to
 | `update_item` | Update fields on an existing item |
 | `delete_item` | Delete an item by ID |
 | `search_items` | Full-text search across all item fields |
+| `add_attachment` | Attach a file (manual, receipt, photo, warranty) to an item |
+| `get_attachment` | Retrieve an attachment as base64 |
+| `delete_attachment` | Remove an attachment from an item |
+| `attach_from_url` | Download a file from a URL and attach it to an item |
 
 ---
 
@@ -114,17 +106,90 @@ The `attachments` field links PDFs and images stored in the item's folder:
 
 You can also add any custom fields you like — they are preserved as-is.
 
-### Configuration
 
-| Method | Example |
-|---|---|
-| `--data-dir` arg *(recommended)* | `--data-dir ~/Documents/AllOurThings` |
-| `ALLOURTHINGS_DATA_DIR` env var | `ALLOURTHINGS_DATA_DIR=~/Documents/AllOurThings` |
-| Default | `~/Documents/AllOurThings` |
+---
 
-The `--data-dir` arg is the recommended approach — it's visible directly in your MCP client config.
+## CLI
 
-> **macOS note:** Claude Desktop spawns the MCP server as a subprocess, so macOS file access prompts may not appear when the server first tries to write to your chosen vault location. If `add_item` hangs silently, the vault directory is likely being blocked by macOS privacy controls. Current workaround: use `~/Desktop/AllOurThings` (Desktop access is granted to Claude Desktop by default) or add `bun` (`/opt/homebrew/bin/bun`) to Full Disk Access in System Settings → Privacy & Security. A proper installer that handles permissions correctly is planned.
+A standalone terminal tool for power users and scripting. Works on macOS, Windows, and Linux. No AI client required.
+
+```bash
+# Run without installing
+npx @allourthings/cli list
+
+# Or install globally
+npm install -g @allourthings/cli
+```
+
+
+### Commands
+
+```bash
+allourthings search <query>                          # full-text search across all fields
+allourthings list [--category <c>] [-l <loc>] [-t <tag>]  # list items, optionally filtered
+allourthings get <id-or-name>                        # show full item detail
+allourthings add <name> [options]                    # add a new item
+allourthings update <id> [options]                   # update item fields
+allourthings delete <id>                             # delete an item (prompts for confirmation)
+```
+
+**Attachment management:**
+
+```bash
+allourthings attach add <item-id> <file>             # attach a local file to an item
+allourthings attach url <item-id> <url>              # download a file and attach it
+allourthings attach get <item-id> <filename>         # save an attachment to disk
+allourthings attach rm  <item-id> <filename>         # delete an attachment
+```
+
+**`add` and `update` options:**
+
+```
+-c, --category <category>
+-b, --brand <brand>
+-m, --model <model>
+    --purchase-date <date>    ISO date, e.g. 2024-01-15
+    --price <price>
+    --currency <currency>     e.g. GBP, USD
+    --warranty <date>         warranty expiry ISO date
+    --retailer <retailer>
+-l, --location <location>
+    --serial <serial>
+-t, --tag <tag...>            repeatable
+-n, --notes <notes>
+    --set key=value           custom/extra fields (update only, repeatable)
+```
+
+**Global options:**
+
+```
+--data-dir <path>    path to inventory data directory (default: ~/Documents/AllOurThings)
+--json               output raw JSON — useful for scripting and agent use
+```
+
+**Data directory:** defaults to `~/Documents/AllOurThings` on all platforms. Created automatically on first write — no setup required. Read commands (`list`, `search`, `get`) return empty results against a missing directory rather than erroring.
+
+### Examples
+
+```bash
+# Add an item
+allourthings add "Bosch Washing Machine" --brand Bosch --model "WGG244A9GB" \
+  --category appliance --location kitchen \
+  --purchase-date 2024-01-15 --price 649 --currency GBP \
+  --warranty 2026-01-15 --retailer "John Lewis"
+
+# Search and pipe to jq
+allourthings search "warranty" --json | jq '[.[] | {name, warranty_expires}]'
+
+# Attach a manual
+allourthings attach add 6164c373 ~/Downloads/bosch-manual.pdf --label "User manual"
+
+# Update a field
+allourthings update 6164c373 --warranty 2027-01-15
+
+# Use a custom data directory
+allourthings --data-dir ~/Dropbox/AllOurThings list
+```
 
 ---
 
@@ -146,18 +211,18 @@ bun install
 | Task | Description |
 |---|---|
 | `task dev` | Seed vault + open MCP Inspector — fastest way to test |
+| `task dev:mcp` | Start MCP server in watch mode (stdio) |
 | `task test:run` | Run automated tests |
 | `task seed` | Append test items to dev vault |
 | `task seed:reset` | Clear dev vault and re-seed |
 | `task inspect` | Open MCP Inspector (dev mode, no build required) |
-| `task inspect:prod` | Build, then open MCP Inspector against dist |
+| `task inspect:prod` | Build, then open MCP Inspector against compiled dist |
 | `task build` | Compile MCP server to dist/ |
+| `task build:cli` | Compile CLI to dist/ |
+| `task cli -- <args>` | Run CLI from source against dev vault, e.g. `task cli -- list` |
 | `task typecheck` | Run TypeScript type checking |
 | `task clean` | Remove dist/ |
 | `task clean:vault` | Delete local dev vault |
-| `task website:dev` | Start website dev server |
-| `task website:build` | Build website for production |
-| `task website:deploy` | Build and deploy to Cloudflare Pages |
 
 All tasks use `./dev-vault` by default. Override with `DATA_DIR=/your/path task <command>`.
 

@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   SERVER: packages/mcp-server
+  CLI: packages/cli
   # Default vault path for local dev/testing.
   # Override: DATA_DIR=/your/path task <command>
   DATA_DIR: "{{.DATA_DIR | default \"./dev-vault\"}}"
@@ -20,6 +21,11 @@ tasks:
   build:
     desc: Compile MCP server to dist/
     dir: "{{.SERVER}}"
+    cmd: bun run build
+
+  build:cli:
+    desc: Compile CLI to dist/
+    dir: "{{.CLI}}"
     cmd: bun run build
 
   typecheck:
@@ -52,6 +58,10 @@ tasks:
     cmds:
       - task: seed:reset
       - task: inspect
+
+  cli:
+    desc: "Run CLI from source against dev vault. Pass commands after --: task cli -- search dishwasher"
+    cmd: bun {{.CLI}}/src/index.ts --data-dir {{.DATA_DIR}} {{.CLI_ARGS}}
 
   # ── Automated tests ────────────────────────────────────────────────────────
 
