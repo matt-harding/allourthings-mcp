@@ -61,7 +61,13 @@ allourthings attach rm  <item-id> <filename>  # delete attachment
 --json               output raw JSON — for scripting and agent use
 ```
 
-**Data directory:** created automatically on first write. Read commands return empty results against a missing directory rather than erroring.
+**Data directory:** defaults to `~/Documents/AllOurThings`. Override with `--data-dir` per command, or set once in your shell profile to avoid repeating it:
+
+```sh
+export ALLOURTHINGS_DATA_DIR=~/Dropbox/AllOurThings
+```
+
+The directory is created automatically on first write. Read commands return empty results against a missing directory rather than erroring.
 
 ## Examples
 
