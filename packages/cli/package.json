@@ -1,6 +1,6 @@
 {
   "name": "@allourthings/cli",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "AllOurThings CLI — manage your personal inventory from the terminal.",
   "license": "MIT",
   "repository": {
@@ -12,7 +12,8 @@
     "dist"
   ],
   "bin": {
-    "allourthings": "dist/index.js"
+    "allourthings": "dist/index.js",
+    "cli": "dist/index.js"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node",
