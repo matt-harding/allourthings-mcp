@@ -112,9 +112,11 @@ allourthings attach rm  <item-id> <filename>         # delete an attachment
 **Global options:**
 
 ```
---data-dir <path>    override the inventory data directory
+--data-dir <path>    path to inventory data directory (default: ~/Documents/AllOurThings)
 --json               output raw JSON — useful for scripting and agent use
 ```
+
+**Data directory:** defaults to `~/Documents/AllOurThings` on all platforms. Created automatically on first write — no setup required. Read commands (`list`, `search`, `get`) return empty results against a missing directory rather than erroring.
 
 ### Examples
 
