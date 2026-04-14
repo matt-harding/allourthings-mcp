@@ -8,10 +8,9 @@
  * Respects --data-dir arg or ALLOURTHINGS_DATA_DIR env var (default: ./dev-vault)
  */
 
-import { writeFile, mkdir, readdir, rm } from "fs/promises";
+import { readdir, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { randomBytes } from "crypto";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
@@ -25,19 +24,6 @@ const dataDir =
 
 const reset = process.argv.includes("--reset");
 const itemsDir = join(dataDir, "items");
-
-function generateId(): string {
-  return randomBytes(4).toString("hex");
-}
-
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50)
-    .replace(/-+$/, "");
-}
 
 const now = new Date();
 const daysAgo = (n: number) =>
@@ -213,8 +199,6 @@ async function main() {
     console.log("--reset: cleared existing items.");
   }
 
-  await mkdir(itemsDir, { recursive: true });
-
   let existingCount = 0;
   if (!reset && existsSync(itemsDir)) {
     const entries = await readdir(itemsDir);
@@ -224,23 +208,9 @@ async function main() {
     }
   }
 
-  const timestamp = now.toISOString();
-  const newItems = seedItems.map((item) => ({
-    ...item,
-    id: generateId(),
-    created_at: timestamp,
-    updated_at: timestamp,
-  }));
-
-  for (const item of newItems) {
-    const dir = join(itemsDir, `${toSlug(item.name)}-${item.id}`);
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, "item.json"), JSON.stringify(item, null, 2));
-  }
-
-  // Add sample attachments to a few items via the native store so the files
-  // and metadata are written correctly.
   const store = new JsCatalogStore(dataDir);
+
+  const newItems = seedItems.map((item) => store.addItem(item));
   const attachmentSeeds: Array<{ name: string; filename: string; kind: string; label: string; content: string }> = [
     {
       name: "Bosch Serie 6 Washing Machine",
@@ -280,10 +250,9 @@ async function main() {
 
   console.log(`\nSeeded ${newItems.length} items:`);
   for (const item of newItems) {
-    const slug = toSlug(item.name);
     const attachments = attachmentSeeds.filter((a) => a.name === item.name);
     const suffix = attachments.length ? `  [${attachments.map((a) => a.filename).join(", ")}]` : "";
-    console.log(`  + ${slug}-${item.id}/${suffix}`);
+    console.log(`  + ${item.id} ${item.name}${suffix}`);
   }
   console.log(`\nVault: ${dataDir} (${existingCount + newItems.length} total items)`);
 }

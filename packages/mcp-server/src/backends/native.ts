@@ -30,7 +30,7 @@ export class NativeBackend implements Backend {
     return this.store.listItems(filter ?? null) as Item[];
   }
 
-  async updateItem(id: string, updates: Partial<NewItem>): Promise<Item | null> {
+  async updateItem(id: string, updates: Record<string, unknown>): Promise<Item | null> {
     return this.store.updateItem(id, updates) as Item | null;
   }
 
