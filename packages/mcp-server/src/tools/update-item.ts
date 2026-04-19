@@ -12,7 +12,7 @@ export async function updateItem(
   backend: Backend,
   input: z.infer<typeof updateItemInputSchema>
 ) {
-  const item = await backend.updateItem(input.id, input.updates as any);
+  const item = await backend.updateItem(input.id, input.updates);
   if (!item) {
     return {
       content: [{ type: "text" as const, text: `No item found with id: ${input.id}` }],
