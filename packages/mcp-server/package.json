@@ -1,6 +1,6 @@
 {
   "name": "@allourthings/mcp-server",
-  "version": "0.5.2",
+  "version": "1.0.0",
   "mcpName": "io.allourthings/mcp-server",
   "description": "AllOurThings — Your things, understood by AI.",
   "license": "MIT",

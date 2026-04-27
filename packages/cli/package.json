@@ -1,6 +1,6 @@
 {
   "name": "@allourthings/cli",
-  "version": "0.5.2",
+  "version": "1.0.0",
   "description": "AllOurThings CLI — manage your personal inventory from the terminal.",
   "license": "MIT",
   "repository": {
