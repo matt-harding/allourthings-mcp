@@ -15,6 +15,7 @@ import { addAttachment, addAttachmentInputSchema } from "./tools/add-attachment.
 import { getAttachment, getAttachmentInputSchema } from "./tools/get-attachment.js";
 import { deleteAttachment, deleteAttachmentInputSchema } from "./tools/delete-attachment.js";
 import { attachFromUrl, attachFromUrlInputSchema } from "./tools/attach-from-url.js";
+import { getItemFields, getItemFieldsInputSchema } from "./tools/get-item-fields.js";
 
 export function createServer(backend: Backend) {
   const server = new Server(
@@ -26,7 +27,7 @@ export function createServer(backend: Backend) {
     tools: [
       {
         name: "add_item",
-        description: "Add a new item to the household inventory",
+        description: "Add a new item to the inventory",
         inputSchema: zodToJsonSchema(addItemInputSchema),
       },
       {
@@ -36,7 +37,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "list_items",
-        description: "List all items, optionally filtered by category or tags",
+        description: "List all items, optionally filtered by category, subcategory, or tags",
         inputSchema: zodToJsonSchema(listItemsInputSchema),
       },
       {
@@ -74,6 +75,11 @@ export function createServer(backend: Backend) {
         description: "Download a file from a URL and attach it to an item (e.g. a PDF manual or warranty document)",
         inputSchema: zodToJsonSchema(attachFromUrlInputSchema),
       },
+      {
+        name: "get_item_fields",
+        description: "Return all field names currently in use across your catalog. Call this before adding or updating items to discover what fields exist and use consistent naming.",
+        inputSchema: zodToJsonSchema(getItemFieldsInputSchema),
+      },
     ],
   }));
 
@@ -101,6 +107,8 @@ export function createServer(backend: Backend) {
         return deleteAttachment(backend, deleteAttachmentInputSchema.parse(args));
       case "attach_from_url":
         return attachFromUrl(backend, attachFromUrlInputSchema.parse(args));
+      case "get_item_fields":
+        return getItemFields(backend);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

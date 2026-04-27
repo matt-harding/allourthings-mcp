@@ -3,7 +3,7 @@ import type { Backend } from "../backends/interface.js";
 
 export const listItemsInputSchema = z.object({
   category: z.string().optional().describe("Filter by category"),
-  location: z.string().optional().describe("Filter by location/room"),
+  subcategory: z.string().optional().describe("Filter by subcategory"),
   tags: z.array(z.string()).optional().describe("Filter by tags (all must match)"),
 });
 
@@ -19,7 +19,7 @@ export async function listItems(
   }
   const summary = items
     .map((item) => {
-      const meta = [item.category, item.location].filter(Boolean).join(", ");
+      const meta = [item.category, item.subcategory].filter(Boolean).join(" › ");
       return `- ${item.name}${meta ? ` [${meta}]` : ""} (${item.id})`;
     })
     .join("\n");

@@ -23,8 +23,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@allourthings/core": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@allourthings/core": "^0.1.11",
     "zod": "^3.24.0",
     "zod-to-json-schema": "^3.25.1"
   },
