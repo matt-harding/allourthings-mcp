@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@allourthings/core": "^0.1.11",
+    "@allourthings/core": "^1.0.0",
     "commander": "^13.1.0"
   },
   "devDependencies": {

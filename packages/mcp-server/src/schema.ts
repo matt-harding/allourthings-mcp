@@ -16,6 +16,7 @@ export const ItemSchema = z
     updated_at: z.string().datetime(),
     // Well-known optional fields
     category: z.string().optional(),
+    subcategory: z.string().optional(),
     brand: z.string().optional(),
     model: z.string().optional(),
     purchase_date: z.string().optional(),

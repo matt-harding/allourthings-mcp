@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createRequire } from "module";
 import { readFileSync, writeFileSync } from "fs";
-import { homedir } from "os";
+import { createHash } from "crypto";
+import { homedir, platform } from "os";
 import { join, basename } from "path";
 import { Command } from "commander";
 import { formatItem, formatItems, out, type Item } from "./format.js";
@@ -24,8 +25,19 @@ function expandTilde(p: string): string {
   return p === "~" || p.startsWith("~/") ? join(homedir(), p.slice(2)) : p;
 }
 
+function resolveCacheDir(dataDir: string): string {
+  const hash = createHash("sha256").update(dataDir).digest("hex").slice(0, 16);
+  const base = platform() === "darwin"
+    ? join(homedir(), "Library", "Caches", "allourthings")
+    : platform() === "win32"
+    ? join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "allourthings")
+    : join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "allourthings");
+  return join(base, hash);
+}
+
 function makeStore() {
-  return new JsCatalogStore(resolveDataDir());
+  const dataDir = resolveDataDir();
+  return new JsCatalogStore(dataDir, resolveCacheDir(dataDir));
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,14 +85,14 @@ program
   .command("list")
   .description("list items, optionally filtered")
   .option("-c, --category <category>", "filter by category")
-  .option("-l, --location <location>", "filter by location")
+  .option("-s, --subcategory <subcategory>", "filter by subcategory")
   .option("-t, --tag <tag...>", "filter by tag (repeatable, all must match)")
-  .action((opts: { category?: string; location?: string; tag?: string[] }) => {
+  .action((opts: { category?: string; subcategory?: string; tag?: string[] }) => {
     const json = !!program.opts().json;
     const store = makeStore();
     const filter = {
       ...(opts.category && { category: opts.category }),
-      ...(opts.location && { location: opts.location }),
+      ...(opts.subcategory && { subcategory: opts.subcategory }),
       ...(opts.tag?.length && { tags: opts.tag }),
     };
     const items: Item[] = store.listItems(Object.keys(filter).length ? filter : null);
@@ -106,6 +118,7 @@ program
   .command("add <name>")
   .description("add a new item to the inventory")
   .option("-c, --category <category>")
+  .option("-s, --subcategory <subcategory>")
   .option("-b, --brand <brand>")
   .option("-m, --model <model>")
   .option("--purchase-date <date>", "ISO date, e.g. 2024-01-15")
@@ -122,6 +135,7 @@ program
     const store = makeStore();
     const newItem: Record<string, unknown> = { name };
     if (opts.category) newItem.category = opts.category;
+    if (opts.subcategory) newItem.subcategory = opts.subcategory;
     if (opts.brand) newItem.brand = opts.brand;
     if (opts.model) newItem.model = opts.model;
     if (opts.purchaseDate) newItem.purchase_date = opts.purchaseDate;
@@ -148,6 +162,7 @@ program
   .description("update fields on an existing item")
   .option("--name <name>")
   .option("-c, --category <category>")
+  .option("-s, --subcategory <subcategory>")
   .option("-b, --brand <brand>")
   .option("-m, --model <model>")
   .option("--purchase-date <date>")
@@ -166,6 +181,7 @@ program
     const updates: Record<string, unknown> = {};
     if (opts.name) updates.name = opts.name;
     if (opts.category) updates.category = opts.category;
+    if (opts.subcategory) updates.subcategory = opts.subcategory;
     if (opts.brand) updates.brand = opts.brand;
     if (opts.model) updates.model = opts.model;
     if (opts.purchaseDate) updates.purchase_date = opts.purchaseDate;
@@ -305,6 +321,26 @@ attach
     const item: Item | null = store.deleteAttachment(itemId, filename);
     if (!item) die(`attachment not found: ${filename} on item ${itemId}`);
     out(json, `Deleted ${filename} from ${item.name} (${item.id}).`, item);
+  });
+
+// ── fields ────────────────────────────────────────────────────────────────────
+
+program
+  .command("fields")
+  .description("list all field names currently in use across your catalog")
+  .action(() => {
+    const json = !!program.opts().json;
+    const store = makeStore();
+    const fields: string[] = store.getItemFields();
+    if (json) {
+      out(json, "", fields);
+    } else {
+      if (fields.length === 0) {
+        process.stdout.write("No items in catalog yet.\n");
+      } else {
+        process.stdout.write(`Fields in use:\n${fields.map((f) => `  ${f}`).join("\n")}\n`);
+      }
+    }
   });
 
 // ── go ────────────────────────────────────────────────────────────────────────

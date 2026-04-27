@@ -4,6 +4,7 @@ export interface Item {
   created_at: string;
   updated_at: string;
   category?: string;
+  subcategory?: string;
   brand?: string;
   model?: string;
   purchase_date?: string;
@@ -37,8 +38,11 @@ export function formatItem(item: Item): string {
     const bm = [item.brand, item.model].filter(Boolean).join(" ");
     lines.push(row("Model", bm));
   }
-  if (item.category) lines.push(row("Category", item.category));
-  if (item.location) lines.push(row("Location", item.location));
+  if (item.category || item.subcategory) {
+    const cat = [item.category, item.subcategory].filter(Boolean).join(" › ");
+    lines.push(row("Category", cat));
+  }
+  if (item.location) lines.push(row("Location", String(item.location)));
   if (item.serial_number) lines.push(row("Serial", item.serial_number));
 
   if (item.purchase_date || item.purchase_price != null || item.retailer) {
@@ -71,7 +75,7 @@ export function formatItem(item: Item): string {
 
   // Custom fields (passthrough — anything not in the known set)
   const known = new Set([
-    "id", "name", "created_at", "updated_at", "category", "brand", "model",
+    "id", "name", "created_at", "updated_at", "category", "subcategory", "brand", "model",
     "purchase_date", "purchase_price", "currency", "warranty_expires", "retailer",
     "location", "serial_number", "features", "notes", "tags", "attachments",
   ]);
@@ -87,10 +91,10 @@ export function formatItem(item: Item): string {
 }
 
 export function formatItemLine(item: Item): string {
-  const meta = [item.category, item.location].filter(Boolean).join("  ");
+  const cat = [item.category, item.subcategory].filter(Boolean).join(" › ");
+  const meta = [cat, item.location].filter(Boolean).join("  ");
   const name = item.name.padEnd(30);
-  const id = item.id;
-  return `  ${id}  ${name}${meta ? `  ${meta}` : ""}`;
+  return `  ${item.id}  ${name}${meta ? `  ${meta}` : ""}`;
 }
 
 export function formatItems(items: Item[], heading?: string): string {

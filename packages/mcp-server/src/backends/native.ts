@@ -1,6 +1,7 @@
 import { createRequire } from "module";
 import type { Backend } from "./interface.js";
 import type { Item, NewItem } from "../schema.js";
+import { resolveCacheDir } from "../config.js";
 
 // Load the native Rust addon (CJS module) from ESM context
 const require = createRequire(import.meta.url);
@@ -11,7 +12,15 @@ export class NativeBackend implements Backend {
   private store: any;
 
   constructor(dataDir: string) {
-    this.store = new JsCatalogStore(dataDir);
+    this.store = new JsCatalogStore(dataDir, resolveCacheDir(dataDir));
+  }
+
+  private refresh(): void {
+    try {
+      this.store.refresh();
+    } catch (e) {
+      console.error("[allourthings] cache refresh failed:", e);
+    }
   }
 
   async addItem(newItem: NewItem): Promise<Item> {
@@ -24,9 +33,10 @@ export class NativeBackend implements Backend {
 
   async listItems(filter?: {
     category?: string;
-    location?: string;
+    subcategory?: string;
     tags?: string[];
   }): Promise<Item[]> {
+    this.refresh();
     return this.store.listItems(filter ?? null) as Item[];
   }
 
@@ -39,7 +49,12 @@ export class NativeBackend implements Backend {
   }
 
   async searchItems(query: string): Promise<Item[]> {
+    this.refresh();
     return this.store.searchItems(query) as Item[];
+  }
+
+  async getItemFields(): Promise<string[]> {
+    return this.store.getItemFields() as string[];
   }
 
   async addAttachment(itemId: string, filename: string, kind: string, data: Buffer, label?: string): Promise<Item> {
