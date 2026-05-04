@@ -51,6 +51,7 @@ describe("NativeBackend", () => {
 
   test("updateItem merges changes and updates updated_at", async () => {
     const item = await backend.addItem({ name: "Laptop", category: "Electronics" });
+    await Bun.sleep(2); // ensure clock advances past millisecond boundary
     const updated = await backend.updateItem(item.id, { brand: "Apple" });
 
     expect(updated?.name).toBe("Laptop");

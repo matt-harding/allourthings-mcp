@@ -4,10 +4,13 @@
   "workspaces": {
     "": {
       "name": "allourthings",
+      "dependencies": {
+        "@allourthings/core": "^1.0.1",
+      },
     },
     "packages/cli": {
       "name": "@allourthings/cli",
-      "version": "0.5.2",
+      "version": "1.0.0",
       "bin": {
         "allourthings": "dist/index.js",
         "cli": "dist/index.js",
@@ -24,7 +27,7 @@
     },
     "packages/mcp-server": {
       "name": "@allourthings/mcp-server",
-      "version": "0.5.2",
+      "version": "1.0.0",
       "bin": {
         "allourthings-mcp-server": "dist/index.js",
       },
@@ -44,7 +47,7 @@
   "packages": {
     "@allourthings/cli": ["@allourthings/cli@workspace:packages/cli"],
 
-    "@allourthings/core": ["@allourthings/core@1.0.0", "", {}, "sha512-1O63iGKaf3SgdQlyeMvyejLFcKoioM4vQ4qX2rk+xTyGQS/gOoNq0qTG8xtlsayBUE3LF0+Y8oSMayeAhSj7Sw=="],
+    "@allourthings/core": ["@allourthings/core@1.0.1", "", {}, "sha512-wo8MRvLnUltdqX0EA8aQ/53TzB8OLbjtvD7CMh8hgIYOFFnGdKoBzF6kt438OBM4Vqd3geyg2boo0pIN1MO3OQ=="],
 
     "@allourthings/mcp-server": ["@allourthings/mcp-server@workspace:packages/mcp-server"],
 
