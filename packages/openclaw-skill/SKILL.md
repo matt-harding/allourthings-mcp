@@ -65,17 +65,23 @@ vault (iCloud Drive, Dropbox, OneDrive, or any folder).
 ## Setup
 
 The user must set `ALLOURTHINGS_DATA_DIR` to the path of their AllOurThings
-vault folder. This is the same folder used by the AllOurThings iOS app.
+vault folder.
 
 ```bash
 # Example — iCloud Drive vault
 export ALLOURTHINGS_DATA_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Documents/allourthings-vault"
+
+# Example — Dropbox
+export ALLOURTHINGS_DATA_DIR="$HOME/Dropbox/AllOurThings"
 
 # Example — local folder
 export ALLOURTHINGS_DATA_DIR="$HOME/Documents/AllOurThings"
 ```
 
 Add this to your shell profile (`~/.zshrc`, `~/.bashrc`) to make it permanent.
+
+The vault is a plain folder of JSON files — create it anywhere you like, or
+point it at an existing folder to start cataloguing immediately.
 
 ## Available Tools
 
@@ -110,8 +116,21 @@ Add this to your shell profile (`~/.zshrc`, `~/.bashrc`) to make it permanent.
 **"Attach the receipt for my MacBook"**
 → `add_attachment` with kind `receipt`
 
+## CLI
+
+AllOurThings also ships a standalone CLI (`@allourthings/cli`) for scripting
+and automation outside of an AI session:
+
+```bash
+npx @allourthings/cli list
+npx @allourthings/cli search "bosch"
+npx @allourthings/cli add --name "Dyson V15" --category "Appliances"
+```
+
+Set `ALLOURTHINGS_DATA_DIR` or pass `--data-dir` to point at your vault.
+
 ## Notes
 
 - Data is stored as plain JSON files — fully portable, no lock-in
-- Works with any sync provider that exposes a local folder path
-- The iOS app and this MCP server share the same vault — changes are reflected on both
+- Works with any sync provider that exposes a local folder path (iCloud Drive, Dropbox, OneDrive, etc.)
+- The MCP server and CLI share the same vault format — interchangeable
