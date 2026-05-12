@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 import { createHash } from "crypto";
 import { homedir, platform } from "os";
 import { join } from "path";
@@ -16,14 +17,44 @@ function platformCacheBase(): string {
   if (platform() === "darwin") {
     return join(homedir(), "Library", "Caches", "allourthings");
   }
-  // Linux / other: XDG_CACHE_HOME or ~/.cache
   const xdg = process.env.XDG_CACHE_HOME;
   return join(xdg ? expandTilde(xdg) : join(homedir(), ".cache"), "allourthings");
 }
 
+export function platformConfigPath(): string {
+  if (platform() === "win32") {
+    return join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "allourthings", "config.json");
+  }
+  if (platform() === "darwin") {
+    return join(homedir(), "Library", "Application Support", "allourthings", "config.json");
+  }
+  const xdg = process.env.XDG_CONFIG_HOME;
+  return join(xdg ? expandTilde(xdg) : join(homedir(), ".config"), "allourthings", "config.json");
+}
+
+export function readConfigFile(): string | null {
+  try {
+    const raw = readFileSync(platformConfigPath(), "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      "data_dir" in parsed &&
+      typeof (parsed as Record<string, unknown>).data_dir === "string"
+    ) {
+      const dir = (parsed as { data_dir: string }).data_dir;
+      return dir ? expandTilde(dir) : null;
+    }
+  } catch {
+    // file missing or malformed — treat as unconfigured
+  }
+  return null;
+}
+
 export function resolveDataDir(
   argv: string[] = process.argv,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
+  configReader: () => string | null = readConfigFile
 ): string {
   const argIndex = argv.indexOf("--data-dir");
   if (argIndex !== -1 && argv[argIndex + 1]) {
@@ -32,7 +63,11 @@ export function resolveDataDir(
   if (env.ALLOURTHINGS_DATA_DIR) {
     return expandTilde(env.ALLOURTHINGS_DATA_DIR);
   }
-  return join(homedir(), "Documents", "AllOurThings");
+  const fromConfig = configReader();
+  if (fromConfig) return expandTilde(fromConfig);
+  throw new Error(
+    "No vault configured. Run `allourthings init` to set up, or set the ALLOURTHINGS_DATA_DIR environment variable."
+  );
 }
 
 /**

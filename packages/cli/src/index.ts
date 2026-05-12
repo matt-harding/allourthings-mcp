@@ -1,11 +1,43 @@
 #!/usr/bin/env node
 import { createRequire } from "module";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, accessSync, existsSync, constants as fsConstants } from "fs";
 import { createHash } from "crypto";
 import { homedir, platform } from "os";
-import { join, basename } from "path";
+import { join, basename, dirname } from "path";
 import { Command } from "commander";
 import { formatItem, formatItems, out, type Item } from "./format.js";
+
+// ── Config file ───────────────────────────────────────────────────────────────
+
+function platformConfigPath(): string {
+  if (platform() === "win32") {
+    return join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "allourthings", "config.json");
+  }
+  if (platform() === "darwin") {
+    return join(homedir(), "Library", "Application Support", "allourthings", "config.json");
+  }
+  const xdg = process.env.XDG_CONFIG_HOME;
+  return join(xdg ?? join(homedir(), ".config"), "allourthings", "config.json");
+}
+
+function readConfigFile(): string | null {
+  try {
+    const raw = readFileSync(platformConfigPath(), "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      "data_dir" in parsed &&
+      typeof (parsed as Record<string, unknown>).data_dir === "string"
+    ) {
+      const dir = (parsed as { data_dir: string }).data_dir;
+      return dir ? expandTilde(dir) : null;
+    }
+  } catch {
+    // file missing or malformed — treat as unconfigured
+  }
+  return null;
+}
 
 // ── Backend ──────────────────────────────────────────────────────────────────
 
@@ -18,7 +50,11 @@ function resolveDataDir(): string {
   const i = argv.indexOf("--data-dir");
   if (i !== -1 && argv[i + 1]) return expandTilde(argv[i + 1]);
   if (process.env.ALLOURTHINGS_DATA_DIR) return expandTilde(process.env.ALLOURTHINGS_DATA_DIR);
-  return join(homedir(), "Documents", "AllOurThings");
+  const fromConfig = readConfigFile();
+  if (fromConfig) return fromConfig;
+  throw new Error(
+    "No vault configured. Run `allourthings init` to set up, or set the ALLOURTHINGS_DATA_DIR environment variable."
+  );
 }
 
 function expandTilde(p: string): string {
@@ -36,7 +72,12 @@ function resolveCacheDir(dataDir: string): string {
 }
 
 function makeStore() {
-  const dataDir = resolveDataDir();
+  let dataDir: string;
+  try {
+    dataDir = resolveDataDir();
+  } catch (err) {
+    return die(err instanceof Error ? err.message : String(err));
+  }
   return new JsCatalogStore(dataDir, resolveCacheDir(dataDir));
 }
 
@@ -341,6 +382,65 @@ program
         process.stdout.write(`Fields in use:\n${fields.map((f) => `  ${f}`).join("\n")}\n`);
       }
     }
+  });
+
+// ── init ──────────────────────────────────────────────────────────────────────
+
+program
+  .command("init [path]")
+  .description("configure the vault directory (writes platform config file)")
+  .option("-y, --yes", "overwrite existing config without prompting")
+  .action(async (pathArg: string | undefined, opts: { yes?: boolean }) => {
+    const defaultDir = join(homedir(), "Documents", "AllOurThings");
+
+    let vaultDir: string;
+    if (pathArg) {
+      vaultDir = expandTilde(pathArg);
+    } else {
+      process.stdout.write(`Vault directory [${defaultDir}]: `);
+      const line = await new Promise<string>((resolve) => {
+        process.stdin.once("data", (d) => resolve(d.toString().trim()));
+      });
+      vaultDir = line ? expandTilde(line) : defaultDir;
+    }
+
+    const configPath = platformConfigPath();
+
+    if (!opts.yes && existsSync(configPath)) {
+      const existing = readConfigFile();
+      process.stdout.write(
+        `Config already exists${existing ? ` (vault: ${existing})` : ""}.\nOverwrite? [y/N] `
+      );
+      const line = await new Promise<string>((resolve) => {
+        process.stdin.once("data", (d) => resolve(d.toString().trim()));
+      });
+      if (line.toLowerCase() !== "y") {
+        process.stdout.write("Cancelled.\n");
+        process.exit(0);
+      }
+    }
+
+    try {
+      mkdirSync(vaultDir, { recursive: true });
+    } catch {
+      die(`cannot create directory: ${vaultDir}`);
+    }
+
+    try {
+      accessSync(vaultDir, fsConstants.W_OK);
+    } catch {
+      die(`directory is not writable: ${vaultDir}`);
+    }
+
+    try {
+      mkdirSync(dirname(configPath), { recursive: true });
+      writeFileSync(configPath, JSON.stringify({ data_dir: vaultDir }, null, 2) + "\n", "utf8");
+    } catch {
+      die(`cannot write config file: ${configPath}`);
+    }
+
+    process.stdin.destroy();
+    process.stdout.write(`Vault configured: ${vaultDir}\nConfig saved to: ${configPath}\n`);
   });
 
 // ── go ────────────────────────────────────────────────────────────────────────
