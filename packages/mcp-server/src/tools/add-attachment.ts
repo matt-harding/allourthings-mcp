@@ -9,7 +9,7 @@ export const addAttachmentInputSchema = z.object({
     .describe("Type of attachment"),
   data_base64: z.string().describe("Base64-encoded file contents"),
   label: z.string().optional().describe("Human-readable label (e.g. 'Washing machine manual')"),
-});
+}).strict();
 
 export async function addAttachment(
   backend: Backend,

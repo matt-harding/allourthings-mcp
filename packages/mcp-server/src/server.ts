@@ -1,10 +1,13 @@
+import { createRequire } from "module";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { ZodError } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { Backend } from "./backends/interface.js";
+import { errorResult } from "./tools/result.js";
 import { addItem, addItemInputSchema } from "./tools/add-item.js";
 import { getItem, getItemInputSchema } from "./tools/get-item.js";
 import { listItems, listItemsInputSchema } from "./tools/list-items.js";
@@ -17,9 +20,23 @@ import { deleteAttachment, deleteAttachmentInputSchema } from "./tools/delete-at
 import { attachFromUrl, attachFromUrlInputSchema } from "./tools/attach-from-url.js";
 import { getItemFields, getItemFieldsInputSchema } from "./tools/get-item-fields.js";
 
+// src/ and dist/ both sit one level below package.json.
+export const SERVER_VERSION: string = createRequire(import.meta.url)("../package.json").version;
+
+function describeError(err: unknown): string {
+  if (err instanceof ZodError) {
+    const issues = err.issues.map((i) => {
+      const path = i.path.join(".");
+      return path ? `${path}: ${i.message}` : i.message;
+    });
+    return `Invalid arguments: ${issues.join("; ")}`;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
 export function createServer(backend: Backend) {
   const server = new Server(
-    { name: "allourthings", version: "0.1.0" },
+    { name: "allourthings", version: SERVER_VERSION },
     { capabilities: { tools: {} } }
   );
 
@@ -27,12 +44,12 @@ export function createServer(backend: Backend) {
     tools: [
       {
         name: "add_item",
-        description: "Add a new item to the inventory",
+        description: "Add a new item to the inventory. Names must be unique. Custom fields are accepted alongside the listed ones; id, created_at, updated_at and attachments are managed automatically.",
         inputSchema: zodToJsonSchema(addItemInputSchema),
       },
       {
         name: "get_item",
-        description: "Get a single item by ID or name",
+        description: "Get a single item by ID or name. If a name matches several items, an error lists their IDs.",
         inputSchema: zodToJsonSchema(getItemInputSchema),
       },
       {
@@ -42,7 +59,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "update_item",
-        description: "Update fields on an existing item",
+        description: "Update fields on an existing item. Set a field to null to clear it. id, created_at, updated_at and attachments cannot be changed here.",
         inputSchema: zodToJsonSchema(updateItemInputSchema),
       },
       {
@@ -52,7 +69,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "search_items",
-        description: "Full-text search across all item fields",
+        description: "Search item field values (case-insensitive). Every word in the query must appear in some field.",
         inputSchema: zodToJsonSchema(searchItemsInputSchema),
       },
       {
@@ -85,34 +102,42 @@ export function createServer(backend: Backend) {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-
-    switch (name) {
-      case "add_item":
-        return addItem(backend, addItemInputSchema.parse(args));
-      case "get_item":
-        return getItem(backend, getItemInputSchema.parse(args));
-      case "list_items":
-        return listItems(backend, listItemsInputSchema.parse(args));
-      case "update_item":
-        return updateItem(backend, updateItemInputSchema.parse(args));
-      case "delete_item":
-        return deleteItem(backend, deleteItemInputSchema.parse(args));
-      case "search_items":
-        return searchItems(backend, searchItemsInputSchema.parse(args));
-      case "add_attachment":
-        return addAttachment(backend, addAttachmentInputSchema.parse(args));
-      case "get_attachment":
-        return getAttachment(backend, getAttachmentInputSchema.parse(args));
-      case "delete_attachment":
-        return deleteAttachment(backend, deleteAttachmentInputSchema.parse(args));
-      case "attach_from_url":
-        return attachFromUrl(backend, attachFromUrlInputSchema.parse(args));
-      case "get_item_fields":
-        return getItemFields(backend);
-      default:
-        throw new Error(`Unknown tool: ${name}`);
+    try {
+      return await callTool(backend, name, args);
+    } catch (err) {
+      return errorResult(describeError(err));
     }
   });
 
   return server;
+}
+
+async function callTool(backend: Backend, name: string, args: unknown) {
+  switch (name) {
+    case "add_item":
+      return addItem(backend, addItemInputSchema.parse(args));
+    case "get_item":
+      return getItem(backend, getItemInputSchema.parse(args));
+    case "list_items":
+      return listItems(backend, listItemsInputSchema.parse(args ?? {}));
+    case "update_item":
+      return updateItem(backend, updateItemInputSchema.parse(args));
+    case "delete_item":
+      return deleteItem(backend, deleteItemInputSchema.parse(args));
+    case "search_items":
+      return searchItems(backend, searchItemsInputSchema.parse(args));
+    case "add_attachment":
+      return addAttachment(backend, addAttachmentInputSchema.parse(args));
+    case "get_attachment":
+      return getAttachment(backend, getAttachmentInputSchema.parse(args));
+    case "delete_attachment":
+      return deleteAttachment(backend, deleteAttachmentInputSchema.parse(args));
+    case "attach_from_url":
+      return attachFromUrl(backend, attachFromUrlInputSchema.parse(args));
+    case "get_item_fields":
+      getItemFieldsInputSchema.parse(args ?? {});
+      return getItemFields(backend);
+    default:
+      return errorResult(`Unknown tool: ${name}`);
+  }
 }

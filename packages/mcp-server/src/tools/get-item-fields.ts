@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Backend } from "../backends/interface.js";
 
-export const getItemFieldsInputSchema = z.object({});
+export const getItemFieldsInputSchema = z.object({}).strict();
 
 export async function getItemFields(backend: Backend) {
   const fields = await backend.getItemFields();

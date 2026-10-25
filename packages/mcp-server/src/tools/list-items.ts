@@ -5,7 +5,7 @@ export const listItemsInputSchema = z.object({
   category: z.string().optional().describe("Filter by category"),
   subcategory: z.string().optional().describe("Filter by subcategory"),
   tags: z.array(z.string()).optional().describe("Filter by tags (all must match)"),
-});
+}).strict();
 
 export async function listItems(
   backend: Backend,
