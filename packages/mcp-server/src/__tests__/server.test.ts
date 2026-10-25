@@ -87,6 +87,26 @@ describe("MCP tool contract", () => {
     expect(res.isError).toBe(true);
   });
 
+  test("invalid base64 and the item.json filename are rejected (F12)", async () => {
+    const item = await addItem({ name: "Fridge" });
+    const bad64 = await call("add_attachment", {
+      item_id: item.id, filename: "a.bin", kind: "other", data_base64: "!!!not base64***",
+    });
+    expect(bad64.isError).toBe(true);
+    expect(bad64.content[0].text).toContain("data_base64");
+
+    const reserved = await call("add_attachment", {
+      item_id: item.id, filename: "item.json", kind: "other", data_base64: "eA==",
+    });
+    expect(reserved.isError).toBe(true);
+    expect((await call("get_attachment", { item_id: item.id, filename: "item.json" })).isError).toBe(true);
+
+    const ok = await call("add_attachment", {
+      item_id: item.id, filename: "a.bin", kind: "other", data_base64: "aGVs\nbG8=",
+    });
+    expect(ok.isError).toBeFalsy();
+  });
+
   test("null clears a field via update_item (F20)", async () => {
     const item = await addItem({ name: "Router", notes: "old", serial_number: "S1" });
     const res = await call("update_item", { id: item.id, updates: { notes: null, serial_number: null } });
