@@ -22,7 +22,50 @@ export interface Item {
 }
 
 function row(label: string, value: string) {
-  return `  ${label.padEnd(12)}${value}`;
+  return `  ${label.length >= 12 ? label + " " : label.padEnd(12)}${value}`;
+}
+
+/** Terminal column width of a code point: 0 for combining marks, 2 for East Asian wide and emoji. */
+function charWidth(cp: number): number {
+  if ((cp >= 0x0300 && cp <= 0x036f) || cp === 0x200d || (cp >= 0xfe00 && cp <= 0xfe0f)) return 0;
+  if (
+    (cp >= 0x1100 && cp <= 0x115f) ||
+    (cp >= 0x2e80 && cp <= 0xa4cf) ||
+    (cp >= 0xac00 && cp <= 0xd7a3) ||
+    (cp >= 0xf900 && cp <= 0xfaff) ||
+    (cp >= 0xfe30 && cp <= 0xfe4f) ||
+    (cp >= 0xff00 && cp <= 0xff60) ||
+    (cp >= 0xffe0 && cp <= 0xffe6) ||
+    (cp >= 0x1f300 && cp <= 0x1faff) ||
+    (cp >= 0x20000 && cp <= 0x3fffd)
+  ) {
+    return 2;
+  }
+  return 1;
+}
+
+/** Truncates (with …) and pads `text` to exactly `width` terminal columns. */
+export function fitWidth(text: string, width: number): string {
+  let used = 0;
+  let result = "";
+  const chars = [...text];
+  const total = chars.reduce((sum, ch) => sum + charWidth(ch.codePointAt(0)!), 0);
+  const limit = total > width ? width - 1 : width;
+  for (const ch of chars) {
+    const w = charWidth(ch.codePointAt(0)!);
+    if (used + w > limit) break;
+    result += ch;
+    used += w;
+  }
+  if (total > width) {
+    result += "…";
+    used += 1;
+  }
+  return result + " ".repeat(Math.max(0, width - used));
+}
+
+function formatValue(val: unknown): string {
+  return typeof val === "string" ? val : JSON.stringify(val);
 }
 
 function formatDate(iso: string): string {
@@ -34,10 +77,8 @@ export function formatItem(item: Item): string {
 
   lines.push(`${item.name} (${item.id})`);
 
-  if (item.brand || item.model) {
-    const bm = [item.brand, item.model].filter(Boolean).join(" ");
-    lines.push(row("Model", bm));
-  }
+  if (item.brand) lines.push(row("Brand", item.brand));
+  if (item.model) lines.push(row("Model", item.model));
   if (item.category || item.subcategory) {
     const cat = [item.category, item.subcategory].filter(Boolean).join(" › ");
     lines.push(row("Category", cat));
@@ -81,7 +122,7 @@ export function formatItem(item: Item): string {
   ]);
   for (const [key, val] of Object.entries(item)) {
     if (!known.has(key) && val != null) {
-      lines.push(row(key, String(val)));
+      lines.push(row(key, formatValue(val)));
     }
   }
 
@@ -93,7 +134,7 @@ export function formatItem(item: Item): string {
 export function formatItemLine(item: Item): string {
   const cat = [item.category, item.subcategory].filter(Boolean).join(" › ");
   const meta = [cat, item.location].filter(Boolean).join("  ");
-  const name = item.name.padEnd(30);
+  const name = fitWidth(item.name, 30);
   return `  ${item.id}  ${name}${meta ? `  ${meta}` : ""}`;
 }
 

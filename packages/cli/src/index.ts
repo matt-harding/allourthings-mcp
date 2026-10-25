@@ -62,7 +62,9 @@ function expandTilde(p: string): string {
 }
 
 function resolveCacheDir(dataDir: string): string {
-  const hash = createHash("sha256").update(dataDir).digest("hex").slice(0, 16);
+  // Version the cache key so a cache written by an older native core cannot
+  // prevent the CLI from discovering items stored by another client.
+  const hash = createHash("sha256").update(`v2:${dataDir}`).digest("hex").slice(0, 16);
   const base = platform() === "darwin"
     ? join(homedir(), "Library", "Caches", "allourthings")
     : platform() === "win32"
@@ -78,7 +80,18 @@ function makeStore() {
   } catch (err) {
     return die(err instanceof Error ? err.message : String(err));
   }
-  return new JsCatalogStore(dataDir, resolveCacheDir(dataDir));
+  const store = new JsCatalogStore(dataDir, resolveCacheDir(dataDir));
+
+  // The vault may have been changed by the iOS app or another MCP client.
+  // Populate/synchronise the query cache before commands such as list, search,
+  // and fields query it.
+  try {
+    store.refresh();
+  } catch (err) {
+    return die(`cannot refresh inventory cache: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  return store;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -92,9 +105,124 @@ function inferKind(filename: string): string {
   return "other";
 }
 
+// Read before commander parses so errors raised during parsing honour --json too.
+const JSON_OUTPUT = process.argv.includes("--json");
+
 function die(msg: string): never {
-  process.stderr.write(`error: ${msg}\n`);
+  process.stderr.write(JSON_OUTPUT ? JSON.stringify({ error: msg }) + "\n" : `error: ${msg}\n`);
   process.exit(1);
+}
+
+/** Resolves with the next line of stdin, or null if stdin ends first. */
+function readLine(): Promise<string | null> {
+  return new Promise((resolve) => {
+    let buf = "";
+    const finish = (line: string | null) => {
+      process.stdin.off("data", onData);
+      process.stdin.off("end", onEnd);
+      process.stdin.pause();
+      resolve(line === null ? null : line.trim());
+    };
+    const onData = (d: Buffer) => {
+      buf += d.toString();
+      const nl = buf.indexOf("\n");
+      if (nl !== -1) finish(buf.slice(0, nl));
+    };
+    const onEnd = () => finish(buf.length ? buf : null);
+    process.stdin.on("data", onData);
+    process.stdin.once("end", onEnd);
+    process.stdin.resume();
+  });
+}
+
+async function confirm(prompt: string): Promise<boolean> {
+  process.stdout.write(`${prompt} [y/N] `);
+  const answer = await readLine();
+  if (answer === null) die("no answer received; pass --yes to skip the prompt");
+  return ["y", "yes"].includes(answer.toLowerCase());
+}
+
+function parsePrice(value: string): number {
+  if (!/^\d+(\.\d+)?$/.test(value.trim())) {
+    die(`price must be a non-negative decimal number such as 649 or 12.99 (got "${value}")`);
+  }
+  return Number(value);
+}
+
+const STRING_OPTIONS: Array<[option: string, flag: string, field: string]> = [
+  ["category", "--category", "category"],
+  ["subcategory", "--subcategory", "subcategory"],
+  ["brand", "--brand", "brand"],
+  ["model", "--model", "model"],
+  ["purchaseDate", "--purchase-date", "purchase_date"],
+  ["currency", "--currency", "currency"],
+  ["warranty", "--warranty", "warranty_expires"],
+  ["retailer", "--retailer", "retailer"],
+  ["location", "--location", "location"],
+  ["serial", "--serial", "serial_number"],
+  ["notes", "--notes", "notes"],
+];
+
+/** Maps field options to item fields. On update an empty value clears the field (null). */
+function collectFields(opts: Record<string, unknown>, mode: "add" | "update"): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  for (const [option, flag, field] of STRING_OPTIONS) {
+    const value = opts[option] as string | undefined;
+    if (value === undefined) continue;
+    if (value === "") {
+      if (mode === "add") die(`${flag} must not be empty`);
+      fields[field] = null;
+    } else {
+      fields[field] = value;
+    }
+  }
+  const price = opts.price as string | undefined;
+  if (price !== undefined) {
+    if (price === "" && mode === "add") die("--price must not be empty");
+    fields.purchase_price = price === "" ? null : parsePrice(price);
+  }
+  if (opts.tag) fields.tags = opts.tag;
+  return fields;
+}
+
+/** Parses `--set key=value`. Well-known typed fields are converted; an empty value clears the field. */
+function parseSet(pair: string): [string, unknown] {
+  const eq = pair.indexOf("=");
+  const key = eq === -1 ? "" : pair.slice(0, eq).trim();
+  if (!key) die(`--set requires key=value with a non-empty key, got: ${pair}`);
+  const value = pair.slice(eq + 1);
+  if (value === "") return [key, null];
+  if (key === "purchase_price") return [key, parsePrice(value)];
+  if (key === "tags" || key === "features") {
+    return [key, value.split(",").map((s) => s.trim()).filter(Boolean)];
+  }
+  return [key, value];
+}
+
+function isPlainFilename(name: string): boolean {
+  return name.length > 0 && name !== "." && name !== ".." && !/[\\/]/.test(name);
+}
+
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
+function inferUrlFilename(contentDisposition: string | null, finalUrl: string): string {
+  if (contentDisposition) {
+    const extended = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(contentDisposition);
+    const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/i.exec(contentDisposition);
+    const raw = extended
+      ? safeDecode(extended[2].trim().replace(/^"|"$/g, ""))
+      : plain ? (plain[2] ?? plain[1]).trim() : null;
+    const name = raw ? basename(raw.replace(/\\/g, "/")) : "";
+    if (isPlainFilename(name)) return name;
+  }
+  const fromUrl = basename(safeDecode(new URL(finalUrl).pathname));
+  return isPlainFilename(fromUrl) ? fromUrl : "attachment";
 }
 
 // ── Program ───────────────────────────────────────────────────────────────────
@@ -105,14 +233,14 @@ program
   .name("allourthings")
   .description("AllOurThings — manage your personal inventory from the terminal.")
   .version(version)
-  .option("--data-dir <path>", "path to inventory data directory (default: ~/Documents/AllOurThings)")
-  .option("--json", "output raw JSON");
+  .option("--data-dir <path>", "path to the vault (overrides ALLOURTHINGS_DATA_DIR and the folder saved by `init`)")
+  .option("--json", "output raw JSON (errors are written to stderr as {\"error\": ...})");
 
-// ── search ────────────────────────────────────────────────────────────────────
+// ── search ─────────────────────────────────────────────────────────────────────────────────
 
 program
   .command("search <query>")
-  .description("full-text search across all item fields")
+  .description("search item field values; every word must match")
   .action((query: string) => {
     const json = !!program.opts().json;
     const store = makeStore();
@@ -174,25 +302,7 @@ program
   .action((name: string, opts: Record<string, unknown>) => {
     const json = !!program.opts().json;
     const store = makeStore();
-    const newItem: Record<string, unknown> = { name };
-    if (opts.category) newItem.category = opts.category;
-    if (opts.subcategory) newItem.subcategory = opts.subcategory;
-    if (opts.brand) newItem.brand = opts.brand;
-    if (opts.model) newItem.model = opts.model;
-    if (opts.purchaseDate) newItem.purchase_date = opts.purchaseDate;
-    if (opts.price) {
-      const n = Number(opts.price);
-      if (isNaN(n)) die("--price must be a number");
-      newItem.purchase_price = n;
-    }
-    if (opts.currency) newItem.currency = opts.currency;
-    if (opts.warranty) newItem.warranty_expires = opts.warranty;
-    if (opts.retailer) newItem.retailer = opts.retailer;
-    if (opts.location) newItem.location = opts.location;
-    if (opts.serial) newItem.serial_number = opts.serial;
-    if (opts.tag) newItem.tags = opts.tag;
-    if (opts.notes) newItem.notes = opts.notes;
-    const item: Item = store.addItem(newItem);
+    const item: Item = store.addItem({ name, ...collectFields(opts, "add") });
     out(json, `Added: ${formatItem(item)}`, item);
   });
 
@@ -215,36 +325,18 @@ program
   .option("--serial <serial>")
   .option("-t, --tag <tag...>")
   .option("-n, --notes <notes>")
-  .option("--set <pair...>", "set a custom field: key=value (repeatable)")
+  .option("--set <pair...>", "set a custom field: key=value (repeatable; empty value clears it)")
+  .option("--unset <field...>", "remove a field (repeatable)")
   .action((id: string, opts: Record<string, unknown>) => {
     const json = !!program.opts().json;
     const store = makeStore();
-    const updates: Record<string, unknown> = {};
-    if (opts.name) updates.name = opts.name;
-    if (opts.category) updates.category = opts.category;
-    if (opts.subcategory) updates.subcategory = opts.subcategory;
-    if (opts.brand) updates.brand = opts.brand;
-    if (opts.model) updates.model = opts.model;
-    if (opts.purchaseDate) updates.purchase_date = opts.purchaseDate;
-    if (opts.price) {
-      const n = Number(opts.price);
-      if (isNaN(n)) die("--price must be a number");
-      updates.purchase_price = n;
+    const updates = collectFields(opts, "update");
+    if (opts.name !== undefined) updates.name = opts.name;
+    for (const pair of (opts.set as string[] | undefined) ?? []) {
+      const [key, value] = parseSet(pair);
+      updates[key] = value;
     }
-    if (opts.currency) updates.currency = opts.currency;
-    if (opts.warranty) updates.warranty_expires = opts.warranty;
-    if (opts.retailer) updates.retailer = opts.retailer;
-    if (opts.location) updates.location = opts.location;
-    if (opts.serial) updates.serial_number = opts.serial;
-    if (opts.tag) updates.tags = opts.tag;
-    if (opts.notes) updates.notes = opts.notes;
-    if (Array.isArray(opts.set)) {
-      for (const pair of opts.set as string[]) {
-        const eq = pair.indexOf("=");
-        if (eq === -1) die(`--set requires key=value format, got: ${pair}`);
-        updates[pair.slice(0, eq)] = pair.slice(eq + 1);
-      }
-    }
+    for (const field of (opts.unset as string[] | undefined) ?? []) updates[field] = null;
     if (Object.keys(updates).length === 0) die("no fields to update — provide at least one option");
     const item: Item | null = store.updateItem(id, updates);
     if (!item) die(`no item found with id: ${id}`);
@@ -262,14 +354,7 @@ program
     const store = makeStore();
 
     if (!opts.yes && !json) {
-      process.stdout.write(`Delete item ${id}? This cannot be undone. [y/N] `);
-      const line = await new Promise<string>((resolve) => {
-        process.stdin.once("data", (d) => resolve(d.toString().trim()));
-      });
-      if (line.toLowerCase() !== "y") {
-        process.stdout.write("Cancelled.\n");
-        process.exit(0);
-      }
+      if (!(await confirm(`Delete item ${id}? This cannot be undone.`))) die("cancelled");
     }
 
     const ok: boolean = store.deleteItem(id);
@@ -304,7 +389,7 @@ attach
 attach
   .command("url <item-id> <url>")
   .description("download a file from a URL and attach it to an item")
-  .option("-f, --filename <filename>", "filename to store as (inferred from URL if omitted)")
+  .option("-f, --filename <filename>", "filename to store as (from Content-Disposition or the URL if omitted)")
   .option("-k, --kind <kind>", "manual | receipt | photo | warranty | other")
   .option("--label <label>")
   .action(async (itemId: string, url: string, opts: { filename?: string; kind?: string; label?: string }) => {
@@ -312,6 +397,13 @@ attach
     const store = makeStore();
     const TIMEOUT_MS = 30_000;
     const MAX_BYTES = 50 * 1024 * 1024;
+
+    // Validate before downloading so a bad call never fetches the URL.
+    if (opts.filename !== undefined && !isPlainFilename(opts.filename)) {
+      die(`invalid filename: ${opts.filename}`);
+    }
+    const existing: Item | null = store.getItem(itemId);
+    if (!existing || existing.id !== itemId) die(`no item found with id: ${itemId}`);
 
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
@@ -334,7 +426,7 @@ attach
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.byteLength > MAX_BYTES) die(`file too large (${Math.round(buffer.byteLength / 1024 / 1024)} MB — limit is 50 MB)`);
 
-    const filename = opts.filename ?? (basename(new URL(url).pathname) || "attachment");
+    const filename = opts.filename ?? inferUrlFilename(response.headers.get("content-disposition"), response.url || url);
     const kind = opts.kind ?? inferKind(filename);
     const item: Item = store.addAttachment(itemId, filename, kind, buffer, opts.label ?? null);
     out(json, `Attached ${filename} to ${item.name} (${item.id}).`, item);
@@ -343,14 +435,18 @@ attach
 attach
   .command("get <item-id> <filename>")
   .description("download an attachment to a local file")
-  .option("-o, --output <path>", "output path (defaults to ./<filename>)")
+  .option("-o, --output <path>", "output path (defaults to ./<filename>; use - for stdout)")
   .action((itemId: string, filename: string, opts: { output?: string }) => {
+    const json = !!program.opts().json;
     const store = makeStore();
     const data: Buffer = store.getAttachment(itemId, filename);
-    if (!data) die(`attachment not found: ${filename} on item ${itemId}`);
+    if (opts.output === "-") {
+      process.stdout.write(data);
+      return;
+    }
     const dest = opts.output ?? basename(filename);
     writeFileSync(dest, data);
-    process.stdout.write(`Saved to ${dest}\n`);
+    out(json, `Saved to ${dest}`, { saved: dest, bytes: data.length });
   });
 
 attach
@@ -398,9 +494,7 @@ program
       vaultDir = expandTilde(pathArg);
     } else {
       process.stdout.write(`Vault directory [${defaultDir}]: `);
-      const line = await new Promise<string>((resolve) => {
-        process.stdin.once("data", (d) => resolve(d.toString().trim()));
-      });
+      const line = await readLine();
       vaultDir = line ? expandTilde(line) : defaultDir;
     }
 
@@ -408,16 +502,10 @@ program
 
     if (!opts.yes && existsSync(configPath)) {
       const existing = readConfigFile();
-      process.stdout.write(
-        `Config already exists${existing ? ` (vault: ${existing})` : ""}.\nOverwrite? [y/N] `
+      const overwrite = await confirm(
+        `Config already exists${existing ? ` (vault: ${existing})` : ""}.\nOverwrite?`
       );
-      const line = await new Promise<string>((resolve) => {
-        process.stdin.once("data", (d) => resolve(d.toString().trim()));
-      });
-      if (line.toLowerCase() !== "y") {
-        process.stdout.write("Cancelled.\n");
-        process.exit(0);
-      }
+      if (!overwrite) die("cancelled");
     }
 
     try {
@@ -445,4 +533,4 @@ program
 
 // ── go ────────────────────────────────────────────────────────────────────────
 
-program.parse();
+program.parseAsync().catch((err: unknown) => die(err instanceof Error ? err.message : String(err)));
