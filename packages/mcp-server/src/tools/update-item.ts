@@ -4,7 +4,7 @@ import { errorResult, textResult } from "./result.js";
 
 export const updateItemInputSchema = z.object({
   id: z.string().describe("Item ID to update (8-character hex, from the id field on the item)"),
-  updates: z.record(z.unknown()).describe(
+  updates: z.record(z.string(), z.unknown()).describe(
     "Fields to update. Any item field can be updated: name, category, brand, model, purchase_date, purchase_price, currency, warranty_expires, retailer, location, features, notes, tags, serial_number. Custom fields are also accepted. Set a field to null to clear it."
   ),
 }).strict();
