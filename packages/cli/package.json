@@ -12,8 +12,7 @@
     "dist"
   ],
   "bin": {
-    "allourthings": "dist/index.js",
-    "cli": "dist/index.js"
+    "allourthings": "dist/index.js"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node",
@@ -21,7 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@allourthings/core": "^1.0.0",
+    "@allourthings/core": "^2.0.0",
     "commander": "^13.1.0"
   },
   "devDependencies": {

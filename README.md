@@ -49,20 +49,23 @@ Restart Claude Desktop. Your inventory vault will be created automatically on fi
 
 ## How it works
 
-The MCP server exposes your inventory to any MCP-compatible AI client via 10 tools:
+The MCP server exposes your inventory to any MCP-compatible AI client via 11 tools:
 
 | Tool | Description |
 |---|---|
-| `add_item` | Add a new item to your inventory |
-| `get_item` | Retrieve an item by ID or name |
-| `list_items` | List all items, optionally filtered by category, location, or tags |
-| `update_item` | Update fields on an existing item |
+| `add_item` | Add a new item (names must be unique) |
+| `get_item` | Get an item by ID or name |
+| `list_items` | List items, optionally filtered by category, subcategory or tags |
+| `update_item` | Update fields on an item; set a field to `null` to clear it |
 | `delete_item` | Delete an item by ID |
-| `search_items` | Full-text search across all item fields |
-| `add_attachment` | Attach a file (manual, receipt, photo, warranty) to an item |
-| `get_attachment` | Retrieve an attachment as base64 |
-| `delete_attachment` | Remove an attachment from an item |
+| `search_items` | Search field values; every word must match |
+| `get_item_fields` | List the field names in use across your catalog |
+| `add_attachment` | Attach a base64-encoded file (manual, receipt, photo, warranty, other) to an item |
 | `attach_from_url` | Download a file from a URL and attach it to an item |
+| `get_attachment` | Get an attachment as base64 |
+| `delete_attachment` | Remove an attachment from an item |
+
+Failures return `isError: true` with a message. See the [MCP server README](./packages/mcp-server/README.md) for parameters, validation rules and configuration.
 
 ---
 
@@ -90,7 +93,7 @@ Attachments (manuals, receipts, photos) sit alongside the item JSON. You can bro
 
 Every item has required fields (`id`, `name`, `created_at`, `updated_at`) and well-known optional fields:
 
-`category` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
+`category` `subcategory` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
 
 The `attachments` field links PDFs and images stored in the item's folder:
 
@@ -125,55 +128,17 @@ npm install -g @allourthings/cli
 ### Commands
 
 ```bash
-allourthings search <query>                          # full-text search across all fields
-allourthings list [--category <c>] [-l <loc>] [-t <tag>]  # list items, optionally filtered
+allourthings init                                    # choose your vault folder (run once)
+allourthings search <query>                          # search field values
+allourthings list [-c <category>] [-s <subcategory>] [-t <tag>]
 allourthings get <id-or-name>                        # show full item detail
 allourthings add <name> [options]                    # add a new item
-allourthings update <id> [options]                   # update item fields
-allourthings delete <id>                             # delete an item (prompts for confirmation)
+allourthings update <id> [options]                   # update fields; --unset to clear
+allourthings delete <id>                             # delete an item (asks to confirm)
+allourthings attach add|url|get|rm ...               # manage attachments
 ```
 
-**Attachment management:**
-
-```bash
-allourthings attach add <item-id> <file>             # attach a local file to an item
-allourthings attach url <item-id> <url>              # download a file and attach it
-allourthings attach get <item-id> <filename>         # save an attachment to disk
-allourthings attach rm  <item-id> <filename>         # delete an attachment
-```
-
-**`add` and `update` options:**
-
-```
--c, --category <category>
--b, --brand <brand>
--m, --model <model>
-    --purchase-date <date>    ISO date, e.g. 2024-01-15
-    --price <price>
-    --currency <currency>     e.g. GBP, USD
-    --warranty <date>         warranty expiry ISO date
-    --retailer <retailer>
--l, --location <location>
-    --serial <serial>
--t, --tag <tag...>            repeatable
--n, --notes <notes>
-    --set key=value           custom/extra fields (update only, repeatable)
-```
-
-**Global options:**
-
-```
---data-dir <path>    path to inventory data directory (default: ~/Documents/AllOurThings)
---json               output raw JSON — useful for scripting and agent use
-```
-
-**Data directory:** defaults to `~/Documents/AllOurThings` on all platforms. To avoid passing `--data-dir` every time, set it once in your shell profile:
-
-```sh
-export ALLOURTHINGS_DATA_DIR=~/Dropbox/AllOurThings
-```
-
-The directory is created automatically on first write. Read commands (`list`, `search`, `get`) return empty results against a missing directory rather than erroring.
+Add `--json` for machine-readable output. See the [CLI README](./packages/cli/README.md) for every option.
 
 ### Examples
 

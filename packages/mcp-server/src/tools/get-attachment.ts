@@ -4,7 +4,7 @@ import type { Backend } from "../backends/interface.js";
 export const getAttachmentInputSchema = z.object({
   item_id: z.string().describe("ID of the item"),
   filename: z.string().describe("Filename of the attachment to retrieve"),
-});
+}).strict();
 
 export async function getAttachment(
   backend: Backend,

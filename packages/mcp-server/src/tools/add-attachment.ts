@@ -7,9 +7,15 @@ export const addAttachmentInputSchema = z.object({
   kind: z
     .enum(["manual", "receipt", "photo", "warranty", "other"])
     .describe("Type of attachment"),
-  data_base64: z.string().describe("Base64-encoded file contents"),
+  data_base64: z
+    .string()
+    .refine((s) => {
+      const compact = s.replace(/\s+/g, "");
+      return compact.length % 4 === 0 && /^[A-Za-z0-9+/]*={0,2}$/.test(compact);
+    }, "must be valid base64")
+    .describe("Base64-encoded file contents"),
   label: z.string().optional().describe("Human-readable label (e.g. 'Washing machine manual')"),
-});
+}).strict();
 
 export async function addAttachment(
   backend: Backend,

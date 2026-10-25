@@ -2,8 +2,8 @@ import { z } from "zod";
 import type { Backend } from "../backends/interface.js";
 
 export const searchItemsInputSchema = z.object({
-  query: z.string().max(200).describe("Search query — matches across all item fields"),
-});
+  query: z.string().max(200).describe("Search query — every word must appear in some field value"),
+}).strict();
 
 export async function searchItems(
   backend: Backend,
