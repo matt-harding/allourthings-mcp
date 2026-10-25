@@ -88,14 +88,14 @@ point it at an existing folder to start cataloguing immediately.
 | Tool | Description |
 |------|-------------|
 | `list_items` | List all items, optionally filtered by category, subcategory, or tags |
-| `search_items` | Full-text search across all item fields |
-| `get_item` | Retrieve a single item by ID or name |
-| `add_item` | Add a new item to the vault |
-| `update_item` | Update fields on an existing item |
+| `search_items` | Search field values; every word in the query must match |
+| `get_item` | Retrieve a single item by ID or name (errors with the matching IDs if a name is ambiguous) |
+| `add_item` | Add a new item to the vault (names must be unique) |
+| `update_item` | Update fields on an existing item; set a field to `null` to clear it |
 | `delete_item` | Delete an item and all its attachments |
 | `get_item_fields` | List all field names in use across the vault |
-| `add_attachment` | Attach a photo, receipt, manual, or warranty document |
-| `get_attachment` | Retrieve an attachment's raw bytes |
+| `add_attachment` | Attach a base64-encoded photo, receipt, manual, or warranty document (`kind` is required) |
+| `get_attachment` | Retrieve an attachment's contents as base64 |
 | `attach_from_url` | Download a file from a URL and attach it to an item |
 | `delete_attachment` | Remove an attachment from an item |
 
@@ -111,7 +111,7 @@ point it at an existing folder to start cataloguing immediately.
 → `add_item` with name, brand, purchase price, and date
 
 **"Show me everything I bought from Amazon last year"**
-→ `search_items` for "Amazon" or `list_items` filtered by retailer
+→ `search_items` for "Amazon", then check `purchase_date`
 
 **"Attach the receipt for my MacBook"**
 → `add_attachment` with kind `receipt`
@@ -124,7 +124,7 @@ and automation outside of an AI session:
 ```bash
 npx @allourthings/cli list
 npx @allourthings/cli search "bosch"
-npx @allourthings/cli add --name "Dyson V15" --category "Appliances"
+npx @allourthings/cli add "Dyson V15" --category "Appliances"
 ```
 
 Set `ALLOURTHINGS_DATA_DIR` or pass `--data-dir` to point at your vault.

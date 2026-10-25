@@ -17,22 +17,28 @@ npm install -g @allourthings/cli
 ## Commands
 
 ```bash
-allourthings search <query>                               # full-text search
-allourthings list [--category <c>] [-l <loc>] [-t <tag>] # list, optionally filtered
+allourthings init [path]                                  # choose your vault folder (run once)
+allourthings search <query>                               # search field values; every word must match
+allourthings list [-c <category>] [-s <subcategory>] [-t <tag>]  # list, optionally filtered
 allourthings get <id-or-name>                             # full item detail
 allourthings add <name> [options]                         # add an item
 allourthings update <id> [options]                        # update item fields
-allourthings delete <id>                                  # delete an item
+allourthings delete <id> [-y]                             # delete an item (asks to confirm unless -y)
+allourthings fields                                       # field names in use across your catalog
 ```
+
+`get` accepts an ID or a name. If a name matches more than one item, it prints an error listing their IDs.
 
 **Attachments:**
 
 ```bash
-allourthings attach add <item-id> <file>      # attach a local file
-allourthings attach url <item-id> <url>       # download and attach from URL
-allourthings attach get <item-id> <filename>  # save attachment to disk
-allourthings attach rm  <item-id> <filename>  # delete attachment
+allourthings attach add <item-id> <file> [-k <kind>] [--label <label>]  # attach a local file
+allourthings attach url <item-id> <url> [-k <kind>] [-f <filename>] [--label <label>]
+allourthings attach get <item-id> <filename> [-o <path>]  # save to disk; -o - writes to stdout
+allourthings attach rm  <item-id> <filename>              # delete an attachment
 ```
+
+`kind` is one of `manual`, `receipt`, `photo`, `warranty` or `other`, and is guessed from the filename if omitted. `attach url` takes the filename from the server's `Content-Disposition` header or the final URL unless you pass `-f`.
 
 ## Options
 
@@ -40,34 +46,46 @@ allourthings attach rm  <item-id> <filename>  # delete attachment
 
 ```
 -c, --category <category>
+-s, --subcategory <subcategory>
 -b, --brand <brand>
 -m, --model <model>
-    --purchase-date <date>    ISO date, e.g. 2024-01-15
-    --price <price>
+    --purchase-date <date>    YYYY-MM-DD
+    --price <price>           non-negative number, e.g. 649 or 12.99
     --currency <currency>     e.g. GBP, USD
-    --warranty <date>         warranty expiry ISO date
+    --warranty <date>         warranty expiry, YYYY-MM-DD
     --retailer <retailer>
 -l, --location <location>
     --serial <serial>         serial number
 -t, --tag <tag...>            repeatable
 -n, --notes <notes>
-    --set key=value           custom fields (update only, repeatable)
 ```
+
+**`update` only:**
+
+```
+    --name <name>             rename the item (names must be unique)
+    --set <key=value...>      set any field; tags and features take comma-separated lists
+    --unset <field...>        remove fields
+```
+
+On `update`, an empty value clears a field: `--notes ""` and `--set serial_number=` both remove it.
 
 **Global:**
 
 ```
---data-dir <path>    inventory data directory (default: ~/Documents/AllOurThings)
---json               output raw JSON — for scripting and agent use
+--data-dir <path>    vault folder (overrides ALLOURTHINGS_DATA_DIR and the folder saved by init)
+--json               JSON output for scripting; errors go to stderr as {"error": "..."}
 ```
 
-**Data directory:** defaults to `~/Documents/AllOurThings`. Override with `--data-dir` per command, or set once in your shell profile to avoid repeating it:
+Errors print a single `error: ...` line and exit with status 1.
+
+**Vault location:** run `allourthings init` once to choose a folder (it suggests `~/Documents/AllOurThings`). The choice is saved to `~/Library/Application Support/allourthings/config.json` (macOS), `%APPDATA%\allourthings\config.json` (Windows) or `~/.config/allourthings/config.json` (Linux), and the MCP server reads the same file. To override it, set `ALLOURTHINGS_DATA_DIR` or pass `--data-dir`:
 
 ```sh
 export ALLOURTHINGS_DATA_DIR=~/Dropbox/AllOurThings
 ```
 
-The directory is created automatically on first write. Read commands return empty results against a missing directory rather than erroring.
+The folder is created on first write. Read commands return empty results for a missing folder rather than erroring.
 
 ## Examples
 
@@ -82,8 +100,8 @@ allourthings add "Bosch Washing Machine" \
 # Search
 allourthings search "dishwasher"
 
-# Get full detail
-allourthings get "Bosch"
+# Get full detail (by name, if it's unambiguous)
+allourthings get "Bosch Washing Machine"
 
 # Filter by category
 allourthings list --category appliance
@@ -93,6 +111,9 @@ allourthings attach add 6164c373 ~/Downloads/manual.pdf --label "User manual"
 
 # Attach from URL
 allourthings attach url 6164c373 https://example.com/manual.pdf --label "User manual"
+
+# Clear fields
+allourthings update 6164c373 --unset notes serial_number
 
 # Pipe to jq
 allourthings search "warranty" --json | jq '[.[] | {name, warranty_expires}]'

@@ -52,16 +52,21 @@ Once connected, ask your AI assistant things like:
 
 | Tool | Description |
 |---|---|
-| `add_item` | Add a new item to your inventory |
-| `get_item` | Retrieve an item by ID or name |
-| `list_items` | List all items, optionally filtered by category, location, or tags |
-| `update_item` | Update fields on an existing item |
+| `add_item` | Add a new item. Names must be unique; custom fields are kept as-is |
+| `get_item` | Get an item by ID or name. If a name matches several items, the error lists their IDs |
+| `list_items` | List items, optionally filtered by `category`, `subcategory` or `tags` (all must match) |
+| `update_item` | Update fields on an item. Set a field to `null` to clear it |
 | `delete_item` | Delete an item by ID |
-| `search_items` | Full-text search across all item fields |
-| `add_attachment` | Attach a file (manual, receipt, photo, warranty) to an item |
-| `attach_from_url` | Download a file from a URL and attach it to an item |
-| `get_attachment` | Retrieve an attachment's contents |
+| `search_items` | Search field values (case-insensitive); every word in the query must match |
+| `get_item_fields` | List the field names in use across your catalog |
+| `add_attachment` | Attach a file: `item_id`, `filename`, `kind`, `data_base64`, optional `label` |
+| `attach_from_url` | Download a file and attach it: `item_id`, `url`, `kind`, optional `filename` and `label` |
+| `get_attachment` | Get an attachment's contents as base64 |
 | `delete_attachment` | Remove an attachment from an item |
+
+`kind` is one of `manual`, `receipt`, `photo`, `warranty` or `other`. If `attach_from_url` has no `filename`, it uses the server's `Content-Disposition` filename, or else the last part of the final URL.
+
+**Errors.** Any failure — invalid or unknown arguments, an item that doesn't exist, a duplicate name, an invalid date — returns a result with `isError: true` and a message describing the problem.
 
 ## Vault structure
 
@@ -82,19 +87,30 @@ Attachments (manuals, receipts, photos) sit alongside the item JSON. The vault i
 
 ## Configuration
 
-The `--data-dir` arg controls where your inventory is stored. It defaults to `~/Documents/AllOurThings` if omitted. To use a different location, update the path in your MCP client config:
+The server looks for your vault in this order:
 
-```json
-"args": ["-y", "@allourthings/mcp-server", "--data-dir", "/path/to/your/vault"]
-```
+1. `--data-dir <path>` in your MCP client config
+2. the `ALLOURTHINGS_DATA_DIR` environment variable
+3. the folder saved by [`allourthings init`](https://www.npmjs.com/package/@allourthings/cli)
+
+If none is set, the server exits with an error explaining how to configure one. `--help` and `--version` print and exit.
+
+A local query cache is kept outside the vault, in `~/Library/Caches/allourthings` (macOS), `%LOCALAPPDATA%\allourthings` (Windows) or `~/.cache/allourthings` (Linux). It is refreshed from the vault before lists and searches, so changes from the iOS app or other tools show up automatically. It is safe to delete.
 
 ## Item schema
 
 Required fields: `id`, `name`, `created_at`, `updated_at`
 
-Well-known optional fields: `category` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
+Well-known optional fields: `category` `subcategory` `brand` `model` `purchase_date` `purchase_price` `currency` `warranty_expires` `retailer` `location` `features` `notes` `tags` `attachments`
 
 Custom fields are preserved as-is — add anything you like.
+
+Rules enforced on every write:
+
+- `name` must not be empty and must be unique (ignoring case and surrounding spaces)
+- `purchase_date` and `warranty_expires` must be `YYYY-MM-DD` (or a full ISO 8601 timestamp)
+- `purchase_price` must be a non-negative number
+- `id`, `created_at`, `updated_at` and `attachments` are managed for you and can't be set directly
 
 ---
 
