@@ -7,6 +7,7 @@ import { join, basename, dirname } from "path";
 import { Command } from "commander";
 import { formatItem, formatItems, out, type Item } from "./format.js";
 import { download, DownloadError, isPlainFilename } from "../../mcp-server/src/download.js";
+import { formatCategories, summariseCategories } from "../../mcp-server/src/categories.js";
 
 // ── Config file ───────────────────────────────────────────────────────────────
 
@@ -459,6 +460,17 @@ program
         process.stdout.write(`Fields in use:\n${fields.map((f) => `  ${f}`).join("\n")}\n`);
       }
     }
+  });
+
+// ── categories ─────────────────────────────────────────────────────────────────
+
+program
+  .command("categories")
+  .description("list categories, subcategories and tags with item counts")
+  .action(() => {
+    const json = !!program.opts().json;
+    const summary = summariseCategories(makeStore().listItems(null) as Item[]);
+    out(json, formatCategories(summary), summary);
   });
 
 // ── init ──────────────────────────────────────────────────────────────────────

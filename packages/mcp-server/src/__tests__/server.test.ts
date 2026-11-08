@@ -62,6 +62,7 @@ describe("MCP tool contract", () => {
       search_items: ["Search items", true, false, true, false],
       get_item: ["Get item", true, false, true, false],
       get_item_fields: ["List fields in use", true, false, true, false],
+      list_categories: ["List categories and tags", true, false, true, false],
       get_attachment: ["Get attachment", true, false, true, false],
       add_item: ["Add item", false, false, false, false],
       update_item: ["Update item", false, true, true, false],
@@ -237,6 +238,16 @@ describe("MCP tool contract", () => {
         http.stop(true);
       }
     });
+  });
+
+  test("list_categories summarises the catalog and takes no arguments (R9)", async () => {
+    expect((await call("list_categories")).content[0].text).toBe("No items in catalog yet.");
+    await addItem({ name: "Oven", category: "Appliance", subcategory: "Kitchen Appliance", tags: ["white goods"] });
+    await addItem({ name: "Boiler", category: "Heating" });
+    expect((await call("list_categories")).content[0].text).toBe(
+      "Categories:\n- Appliance (1)\n  - Kitchen Appliance (1)\n- Heating (1)\nTags:\n- white goods (1)"
+    );
+    expect((await call("list_categories", { category: "x" })).isError).toBe(true);
   });
 
   test("attach_from_url refuses local addresses (R3)", async () => {

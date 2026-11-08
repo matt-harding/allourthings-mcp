@@ -156,6 +156,19 @@ describe("attach url (F13)", () => {
   });
 });
 
+describe("categories (R9)", () => {
+  test("prints the tree and --json returns the summary", () => {
+    addJson(["Oven", "--category", "Appliance", "--subcategory", "Kitchen Appliance"]);
+    addJson(["Boiler", "--category", "Heating"]);
+    const text = cli(["categories"]);
+    expect(text.code).toBe(0);
+    expect(text.stdout).toBe("Categories:\n- Appliance (1)\n  - Kitchen Appliance (1)\n- Heating (1)\nTags: none\n");
+    const json = JSON.parse(cli(["--json", "categories"]).stdout);
+    expect(json.categories.map((c: { name: string }) => c.name)).toEqual(["Appliance", "Heating"]);
+    expect(json.tags).toEqual([]);
+  });
+});
+
 describe("attachments never overwrite by default (R2)", () => {
   async function itemWithManual() {
     const item = addJson(["Boiler"]);

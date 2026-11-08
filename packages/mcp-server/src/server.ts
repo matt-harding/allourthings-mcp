@@ -18,6 +18,7 @@ import { getAttachment, getAttachmentInputSchema } from "./tools/get-attachment.
 import { deleteAttachment, deleteAttachmentInputSchema } from "./tools/delete-attachment.js";
 import { attachFromUrl, attachFromUrlInputSchema } from "./tools/attach-from-url.js";
 import { getItemFields, getItemFieldsInputSchema } from "./tools/get-item-fields.js";
+import { listCategories, listCategoriesInputSchema } from "./tools/list-categories.js";
 
 // src/ and dist/ both sit one level below package.json.
 export const SERVER_VERSION: string = createRequire(import.meta.url)("../package.json").version;
@@ -124,6 +125,12 @@ export function createServer(backend: Backend) {
         inputSchema: toInputSchema(getItemFieldsInputSchema),
         annotations: { title: "List fields in use", ...READ },
       },
+      {
+        name: "list_categories",
+        description: "Show how the catalog is organised: categories with their subcategories, and tags, each with item counts. Call this before adding or recategorising items, and reuse the existing spelling rather than inventing near-duplicates.",
+        inputSchema: toInputSchema(listCategoriesInputSchema),
+        annotations: { title: "List categories and tags", ...READ },
+      },
     ],
   }));
 
@@ -164,6 +171,9 @@ async function callTool(backend: Backend, name: string, args: unknown) {
     case "get_item_fields":
       getItemFieldsInputSchema.parse(args ?? {});
       return getItemFields(backend);
+    case "list_categories":
+      listCategoriesInputSchema.parse(args ?? {});
+      return listCategories(backend);
     default:
       return errorResult(`Unknown tool: ${name}`);
   }
