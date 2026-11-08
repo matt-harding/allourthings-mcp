@@ -5,7 +5,7 @@ import { join } from "path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { NativeBackend } from "../backends/native.js";
-import { createServer, SERVER_VERSION } from "../server.js";
+import { createServer, SERVER_INSTRUCTIONS, SERVER_VERSION } from "../server.js";
 import { resolveCacheDir } from "../config.js";
 import { inferFilename } from "../tools/attach-from-url.js";
 
@@ -16,7 +16,10 @@ describe("MCP tool contract", () => {
   let client: Client;
 
   async function call(name: string, args: Record<string, unknown> = {}): Promise<ToolResult> {
-    return (await client.callTool({ name, arguments: args })) as ToolResult;
+    const res = (await client.callTool({ name, arguments: args })) as ToolResult;
+    // R5: every error path in this suite is checked for the prefix.
+    if (res.isError) expect(res.content[0].text).toStartWith("Error: ");
+    return res;
   }
 
   async function addItem(args: Record<string, unknown>) {
@@ -42,6 +45,17 @@ describe("MCP tool contract", () => {
   test("serverInfo reports the package version", () => {
     expect(client.getServerVersion()?.version).toBe(SERVER_VERSION);
     expect(SERVER_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  test("initialize returns usage instructions (R4)", () => {
+    expect(client.getInstructions()).toBe(SERVER_INSTRUCTIONS);
+    expect(SERVER_INSTRUCTIONS).toContain("Never invent item IDs");
+  });
+
+  test("get_item on a missing item is not an error (R5)", async () => {
+    const res = await call("get_item", { id_or_name: "00000000" });
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).not.toStartWith("Error");
   });
 
   test("invalid arguments are a tool error, not a protocol error (F7)", async () => {

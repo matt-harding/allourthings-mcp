@@ -22,6 +22,14 @@ import { getItemFields, getItemFieldsInputSchema } from "./tools/get-item-fields
 // src/ and dist/ both sit one level below package.json.
 export const SERVER_VERSION: string = createRequire(import.meta.url)("../package.json").version;
 
+export const SERVER_INSTRUCTIONS = `AllOurThings is the user's personal inventory, stored in a folder on their own device. Nothing is sent to AllOurThings servers.
+- Use search_items for open questions and list_items with filters for structured lookups. Call get_item_fields to see which fields this catalog uses before adding or updating items.
+- Search matches words, not meanings. If a search finds nothing, try other words (e.g. "fridge" for "refrigerator") or use list_categories / list_items and judge the results yourself.
+- Never invent item IDs. Use IDs returned by the tools. If a name matches several items, ask the user which one.
+- Confirm with the user before deleting items or attachments, or clearing fields.
+- attach_from_url downloads from the internet. Only use URLs from the manufacturer or another trustworthy source, prefer direct PDF links, and pass a readable filename.
+- Dates are YYYY-MM-DD; prices are plain numbers with a separate currency.`;
+
 function toInputSchema(schema: z.ZodType) {
   return z.toJSONSchema(schema, { io: "input" }) as { type: "object"; [key: string]: unknown };
 }
@@ -40,7 +48,7 @@ function describeError(err: unknown): string {
 export function createServer(backend: Backend) {
   const server = new Server(
     { name: "allourthings", version: SERVER_VERSION },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
