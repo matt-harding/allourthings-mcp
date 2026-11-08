@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { NativeBackend } from "../backends/native.js";
+import { resolveCacheDir } from "../config.js";
 
 describe("attachment tools", () => {
   let dataDir: string;
@@ -15,6 +16,7 @@ describe("attachment tools", () => {
 
   afterEach(async () => {
     await rm(dataDir, { recursive: true, force: true });
+    await rm(resolveCacheDir(dataDir), { recursive: true, force: true }).catch(() => {});
   });
 
   test("add_attachment writes file and records metadata on item", async () => {
