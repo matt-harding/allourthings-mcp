@@ -17,9 +17,13 @@ AllOurThings is an inventory system that works the way you do. Catalog anything 
 
 ## Quick start
 
-> **Desktop only.** Requires macOS, Windows, or Linux with [Claude Desktop](https://claude.ai/download) or another MCP-compatible client.
+> **Desktop only.** Requires macOS, Windows, or Linux with [Claude Desktop](https://claude.ai/download) or another MCP-compatible client, and [Node.js](https://nodejs.org) 20 or later.
 
-### 1. Add to Claude Desktop
+### 1. Choose a vault folder
+
+Create an empty folder for your inventory, such as `~/Documents/AllOurThings`, or run `npx @allourthings/cli init`, which creates and remembers it. If you use the AllOurThings iOS app, use the same folder it uses (e.g. in iCloud Drive).
+
+### 2. Add to Claude Desktop
 
 Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
@@ -34,9 +38,9 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 }
 ```
 
-Restart Claude Desktop. Your inventory vault will be created automatically on first use.
+Restart Claude Desktop. If the folder doesn't exist, the server stops and says so rather than creating a mistyped one.
 
-### 2. Start asking questions
+### 3. Start asking questions
 
 - *"Add my Bosch washing machine, bought from John Lewis for £649 in January 2024 with a 2-year warranty"*
 - *"What appliances do I own?"*
@@ -49,23 +53,24 @@ Restart Claude Desktop. Your inventory vault will be created automatically on fi
 
 ## How it works
 
-The MCP server exposes your inventory to any MCP-compatible AI client via 11 tools:
+The MCP server exposes your inventory to any MCP-compatible AI client via 12 tools:
 
-| Tool | Description |
-|---|---|
-| `add_item` | Add a new item (names must be unique) |
-| `get_item` | Get an item by ID or name |
-| `list_items` | List items, optionally filtered by category, subcategory or tags |
-| `update_item` | Update fields on an item; set a field to `null` to clear it |
-| `delete_item` | Delete an item by ID |
-| `search_items` | Search field values; every word must match |
-| `get_item_fields` | List the field names in use across your catalog |
-| `add_attachment` | Attach a base64-encoded file (manual, receipt, photo, warranty, other) to an item |
-| `attach_from_url` | Download a file from a URL and attach it to an item |
-| `get_attachment` | Get an attachment as base64 |
-| `delete_attachment` | Remove an attachment from an item |
+| Tool | Description | Access |
+|---|---|---|
+| `search_items` | Ranked search: items with any query word, best match first; English plurals and accents handled | Read |
+| `list_items` | List items, optionally filtered by category, subcategory or tags | Read |
+| `get_item` | Get an item by ID or name | Read |
+| `get_item_fields` | List the field names in use across your catalog | Read |
+| `list_categories` | Categories, subcategories and tags, with counts | Read |
+| `get_attachment` | Get an attachment as an image, PDF or text the assistant can read (up to 10 MB) | Read |
+| `add_item` | Add a new item (names must be unique) | Write |
+| `update_item` | Update fields on an item; set a field to `null` to clear it | Write, destructive |
+| `delete_item` | Delete an item and its attachments | Destructive |
+| `add_attachment` | Attach a base64-encoded file; never replaces an existing one | Write |
+| `attach_from_url` | Download a file from the public internet and attach it; local and private addresses are refused | Write, internet |
+| `delete_attachment` | Remove an attachment from an item | Destructive |
 
-Failures return `isError: true` with a message. See the [MCP server README](./packages/mcp-server/README.md) for parameters, validation rules and configuration.
+Tools declare their access as MCP annotations so clients can ask before changing, deleting or downloading. Failures return `isError: true` with a message starting `Error: `. See the [MCP server README](./packages/mcp-server/README.md) for parameters, validation rules, download restrictions and configuration.
 
 ---
 
@@ -129,12 +134,13 @@ npm install -g @allourthings/cli
 
 ```bash
 allourthings init                                    # choose your vault folder (run once)
-allourthings search <query>                          # search field values
+allourthings search <query> [-n <limit>]             # ranked search, best match first
 allourthings list [-c <category>] [-s <subcategory>] [-t <tag>]
 allourthings get <id-or-name>                        # show full item detail
 allourthings add <name> [options]                    # add a new item
 allourthings update <id> [options]                   # update fields; --unset to clear
 allourthings delete <id>                             # delete an item (asks to confirm)
+allourthings categories                              # categories and tags with counts
 allourthings attach add|url|get|rm ...               # manage attachments
 ```
 

@@ -6,6 +6,8 @@ A CLI for [AllOurThings](https://allourthings.io) — catalog everything you own
 
 ## Install
 
+Requires [Node.js](https://nodejs.org) 20 or later.
+
 ```bash
 # Run without installing
 npx @allourthings/cli list
@@ -18,27 +20,34 @@ npm install -g @allourthings/cli
 
 ```bash
 allourthings init [path]                                  # choose your vault folder (run once)
-allourthings search <query>                               # search field values; every word must match
+allourthings search <query> [-n <limit>]                  # ranked search: any word matches, best first
 allourthings list [-c <category>] [-s <subcategory>] [-t <tag>]  # list, optionally filtered
 allourthings get <id-or-name>                             # full item detail
 allourthings add <name> [options]                         # add an item
 allourthings update <id> [options]                        # update item fields
 allourthings delete <id> [-y]                             # delete an item (asks to confirm unless -y)
 allourthings fields                                       # field names in use across your catalog
+allourthings categories                                   # categories, subcategories and tags with counts
 ```
 
 `get` accepts an ID or a name. If a name matches more than one item, it prints an error listing their IDs.
 
+`search` ranks items by how well they match: names count most, then brand and model, then category, subcategory and tags, then notes, custom fields and attachment names. English plurals and accents are handled (`fridges` finds "Wine Fridge", `pokemon` finds "Pokémon"); synonyms and typos are not.
+
 **Attachments:**
 
 ```bash
-allourthings attach add <item-id> <file> [-k <kind>] [--label <label>]  # attach a local file
-allourthings attach url <item-id> <url> [-k <kind>] [-f <filename>] [--label <label>]
+allourthings attach add <item-id> <file> [-k <kind>] [--label <label>] [--replace]  # attach a local file
+allourthings attach url <item-id> <url> [-k <kind>] [-f <filename>] [--label <label>] [--replace]
 allourthings attach get <item-id> <filename> [-o <path>]  # save to disk; -o - writes to stdout
 allourthings attach rm  <item-id> <filename>              # delete an attachment
 ```
 
 `kind` is one of `manual`, `receipt`, `photo`, `warranty` or `other`, and is guessed from the filename if omitted. `attach url` takes the filename from the server's `Content-Disposition` header or the final URL unless you pass `-f`.
+
+`attach add` and `attach url` refuse a filename the item already has (ignoring case) unless you pass `--replace`.
+
+`attach url` only downloads public `http`/`https` URLs. Addresses on your own machine or network (loopback, private, link-local, carrier-grade NAT) are refused, every redirect is checked again (at most 5), and files are limited to 50 MB with a 30-second timeout.
 
 ## Options
 
@@ -85,7 +94,7 @@ Errors print a single `error: ...` line and exit with status 1.
 export ALLOURTHINGS_DATA_DIR=~/Dropbox/AllOurThings
 ```
 
-The folder is created on first write. Read commands return empty results for a missing folder rather than erroring.
+The folder is created on first write. Read commands return empty results for a missing folder rather than erroring. (The MCP server is stricter: it refuses to start if its folder doesn't exist.)
 
 ## Examples
 
@@ -97,8 +106,12 @@ allourthings add "Bosch Washing Machine" \
   --purchase-date 2024-01-15 --price 649 --currency GBP \
   --warranty 2026-01-15 --retailer "John Lewis"
 
-# Search
+# Search (best matches first; --limit caps the results)
 allourthings search "dishwasher"
+allourthings search "kitchen appliances" --limit 5
+
+# See how your catalog is organised
+allourthings categories
 
 # Get full detail (by name, if it's unambiguous)
 allourthings get "Bosch Washing Machine"
