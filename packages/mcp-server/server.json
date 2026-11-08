@@ -6,19 +6,19 @@
     "url": "https://github.com/matt-harding/allourthings-mcp",
     "source": "github"
   },
-  "version": "2.0.0",
+  "version": "2.1.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@allourthings/mcp-server",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "ALLOURTHINGS_DATA_DIR",
-          "description": "Directory where inventory data is stored. Overrides the folder saved by `allourthings init`.",
+          "description": "Directory where inventory data is stored. The folder must already exist. Overrides the folder saved by `allourthings init`.",
           "isRequired": false,
           "format": "string",
           "isSecret": false
@@ -28,7 +28,7 @@
         {
           "type": "named",
           "name": "--data-dir",
-          "description": "Directory where inventory data is stored. Alternative to ALLOURTHINGS_DATA_DIR env var.",
+          "description": "Directory where inventory data is stored. The folder must already exist. Alternative to ALLOURTHINGS_DATA_DIR env var.",
           "isRequired": false,
           "format": "string"
         }
