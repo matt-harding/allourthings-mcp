@@ -54,7 +54,8 @@ function resolveDataDir(): string {
   const fromConfig = readConfigFile();
   if (fromConfig) return fromConfig;
   throw new Error(
-    "No vault configured. Run `allourthings init` to set up, or set the ALLOURTHINGS_DATA_DIR environment variable."
+    "No AllOurThings vault is configured. Run `allourthings init` to choose or create one, pass `--data-dir <folder>`, or set `ALLOURTHINGS_DATA_DIR`. " +
+      "If you use the AllOurThings iOS app, choose the same folder it uses (e.g. in iCloud Drive)."
   );
 }
 

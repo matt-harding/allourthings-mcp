@@ -1,10 +1,52 @@
 import { describe, test, expect } from "bun:test";
-import { resolveDataDir, resolveCacheDir, platformConfigPath } from "../config.js";
+import { mkdtempSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import {
+  assertVaultFolder, NO_VAULT_MESSAGE, resolveDataDir, resolveCacheDir, platformConfigPath,
+} from "../config.js";
 import { homedir, platform } from "os";
 import { join } from "path";
 
 const noConfig = () => null;
 const fromConfig = (path: string) => () => path;
+
+describe("vault folder checks (R6)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aot-config-test-"));
+  const file = join(dir, "not-a-folder");
+  writeFileSync(file, "");
+
+  test("an existing folder is accepted, even if empty", () => {
+    expect(() => assertVaultFolder(dir)).not.toThrow();
+  });
+
+  test("a missing folder is refused with its path", () => {
+    const missing = join(dir, "Househlod");
+    expect(() => assertVaultFolder(missing)).toThrow(`The vault folder doesn't exist: ${missing}.`);
+  });
+
+  test("a file is refused", () => {
+    expect(() => assertVaultFolder(file)).toThrow("is a file, not a folder");
+  });
+
+  test("the server exits with the message instead of starting", () => {
+    const missing = join(dir, "missing");
+    const proc = Bun.spawnSync(
+      [process.execPath, join(import.meta.dir, "..", "index.ts"), "--data-dir", missing],
+      { stdin: "ignore" }
+    );
+    expect(proc.exitCode).toBe(1);
+    expect(proc.stderr.toString()).toContain(`The vault folder doesn't exist: ${missing}.`);
+  });
+
+  test("the server explains how to configure a vault", () => {
+    const proc = Bun.spawnSync([process.execPath, join(import.meta.dir, "..", "index.ts")], {
+      stdin: "ignore",
+      env: { ...process.env, ALLOURTHINGS_DATA_DIR: "", HOME: dir, APPDATA: dir, XDG_CONFIG_HOME: dir },
+    });
+    expect(proc.exitCode).toBe(1);
+    expect(proc.stderr.toString()).toContain(NO_VAULT_MESSAGE);
+  });
+});
 
 describe("resolveDataDir", () => {
   test("returns --data-dir arg when provided", () => {
@@ -48,12 +90,12 @@ describe("resolveDataDir", () => {
 
   test("throws when nothing is configured", () => {
     expect(() => resolveDataDir(["bun", "index.ts"], {}, noConfig))
-      .toThrow("No vault configured");
+      .toThrow(NO_VAULT_MESSAGE);
   });
 
   test("throws when --data-dir flag has no following value", () => {
     expect(() => resolveDataDir(["bun", "index.ts", "--data-dir"], {}, noConfig))
-      .toThrow("No vault configured");
+      .toThrow(NO_VAULT_MESSAGE);
   });
 
   test("ignores unrelated args before --data-dir", () => {

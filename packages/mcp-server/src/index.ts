@@ -2,7 +2,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { NativeBackend } from "./backends/native.js";
 import { createServer, SERVER_VERSION } from "./server.js";
-import { resolveDataDir } from "./config.js";
+import { assertVaultFolder, resolveDataDir } from "./config.js";
 
 const args = process.argv.slice(2);
 if (args.includes("--version") || args.includes("-v")) {
@@ -31,6 +31,7 @@ Options:
 let dataDir: string;
 try {
   dataDir = resolveDataDir();
+  assertVaultFolder(dataDir);
 } catch (err) {
   console.error(`[allourthings] ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
