@@ -2,6 +2,7 @@ import { z } from "zod";
 import { basename } from "path";
 import type { Backend } from "../backends/interface.js";
 import { errorResult, textResult } from "./result.js";
+import { existingAttachmentError } from "./add-attachment.js";
 
 const TIMEOUT_MS = 30_000;
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -62,6 +63,10 @@ export async function attachFromUrl(
   if (!existing || existing.id !== input.item_id) {
     return errorResult(`No item found with id: ${input.item_id}`);
   }
+  if (input.filename !== undefined) {
+    const clash = await existingAttachmentError(backend, input.item_id, input.filename);
+    if (clash) return clash;
+  }
 
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
@@ -117,6 +122,10 @@ export async function attachFromUrl(
   const filename =
     input.filename ??
     inferFilename(response.headers.get("content-disposition"), response.url || input.url);
+
+  // Inferred names are only known after the download; recheck in case it changed meanwhile.
+  const clash = await existingAttachmentError(backend, input.item_id, filename);
+  if (clash) return clash;
 
   const item = await backend.addAttachment(input.item_id, filename, input.kind, buffer, input.label);
 

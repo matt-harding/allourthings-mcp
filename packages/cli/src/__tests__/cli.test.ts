@@ -149,6 +149,43 @@ describe("attach url (F13)", () => {
   });
 });
 
+describe("attachments never overwrite by default (R2)", () => {
+  async function itemWithManual() {
+    const item = addJson(["Boiler"]);
+    const file = join(home, "manual.pdf");
+    await writeFile(file, "original");
+    expect(cli(["attach", "add", item.id, file]).code).toBe(0);
+    return item;
+  }
+
+  test("attach add refuses an existing filename, ignoring case", async () => {
+    const item = await itemWithManual();
+    const upper = join(home, "Manual.PDF");
+    await writeFile(upper, "new");
+    const res = cli(["attach", "add", item.id, upper]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toBe('error: Boiler already has an attachment named "manual.pdf". Pass --replace to overwrite it.\n');
+    expect(cli(["attach", "get", item.id, "manual.pdf", "-o", "-"]).stdout).toBe("original");
+  });
+
+  test("attach add --replace overwrites and keeps one record", async () => {
+    const item = await itemWithManual();
+    const upper = join(home, "Manual.PDF");
+    await writeFile(upper, "new");
+    const res = cli(["--json", "attach", "add", item.id, upper, "--replace"]);
+    expect(res.code).toBe(0);
+    expect(JSON.parse(res.stdout).attachments.map((a: { filename: string }) => a.filename)).toEqual(["manual.pdf"]);
+    expect(cli(["attach", "get", item.id, "manual.pdf", "-o", "-"]).stdout).toBe("new");
+  });
+
+  test("attach url refuses a given filename before downloading", async () => {
+    const item = await itemWithManual();
+    const res = cli(["attach", "url", item.id, "http://127.0.0.1:9/never.pdf", "-f", "manual.pdf"]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain("already has an attachment");
+  });
+});
+
 describe("human output (F17)", () => {
   test("brand and model are labelled separately; long keys stay readable", () => {
     const item = addJson(["Dishwasher", "--brand", "Bosch", "--model", "SMS6"]);

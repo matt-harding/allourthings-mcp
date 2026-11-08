@@ -96,7 +96,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "add_attachment",
-        description: "Attach a file (manual, receipt, photo, warranty, etc.) to an item. File contents must be base64-encoded.",
+        description: "Attach a file (manual, receipt, photo, warranty, etc.) to an item. File contents must be base64-encoded. Never replaces an existing attachment with the same filename.",
         inputSchema: toInputSchema(addAttachmentInputSchema),
         annotations: { title: "Add attachment", ...WRITE },
       },
@@ -114,7 +114,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "attach_from_url",
-        description: "Download a file from a URL and attach it to an item (e.g. a PDF manual or warranty document)",
+        description: "Download a file from a URL and attach it to an item (e.g. a PDF manual or warranty document). Never replaces an existing attachment with the same filename.",
         inputSchema: toInputSchema(attachFromUrlInputSchema),
         annotations: { title: "Attach file from URL", ...WRITE, openWorldHint: true },
       },

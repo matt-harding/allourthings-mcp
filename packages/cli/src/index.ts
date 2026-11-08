@@ -366,12 +366,30 @@ program
 
 const attach = program.command("attach").description("manage item attachments");
 
+/**
+ * Filename to store under, or exits if the item already has it and --replace wasn't given.
+ * Case-insensitive, as macOS and Windows are; a replacement keeps the existing spelling.
+ */
+function attachmentFilename(store: ReturnType<typeof makeStore>, itemId: string, filename: string, replace?: boolean): string {
+  let item: Item | null = null;
+  try {
+    item = store.getItem(itemId);
+  } catch {}
+  if (!item || item.id !== itemId) return filename;
+  const lower = filename.toLowerCase();
+  const clash = item.attachments?.find((a) => a.filename.toLowerCase() === lower);
+  if (!clash) return filename;
+  if (!replace) die(`${item.name} already has an attachment named "${clash.filename}". Pass --replace to overwrite it.`);
+  return clash.filename;
+}
+
 attach
   .command("add <item-id> <file>")
   .description("attach a local file to an item")
   .option("-k, --kind <kind>", "manual | receipt | photo | warranty | other (inferred from filename if omitted)")
   .option("--label <label>", "human-readable label")
-  .action((itemId: string, file: string, opts: { kind?: string; label?: string }) => {
+  .option("--replace", "overwrite an existing attachment with the same filename")
+  .action((itemId: string, file: string, opts: { kind?: string; label?: string; replace?: boolean }) => {
     const json = !!program.opts().json;
     const store = makeStore();
     let data: Buffer;
@@ -380,7 +398,7 @@ attach
     } catch {
       die(`cannot read file: ${file}`);
     }
-    const filename = basename(file);
+    const filename = attachmentFilename(store, itemId, basename(file), opts.replace);
     const kind = opts.kind ?? inferKind(filename);
     const item: Item = store.addAttachment(itemId, filename, kind, data, opts.label ?? null);
     out(json, `Attached ${filename} to ${item.name} (${item.id}).`, item);
@@ -392,7 +410,8 @@ attach
   .option("-f, --filename <filename>", "filename to store as (from Content-Disposition or the URL if omitted)")
   .option("-k, --kind <kind>", "manual | receipt | photo | warranty | other")
   .option("--label <label>")
-  .action(async (itemId: string, url: string, opts: { filename?: string; kind?: string; label?: string }) => {
+  .option("--replace", "overwrite an existing attachment with the same filename")
+  .action(async (itemId: string, url: string, opts: { filename?: string; kind?: string; label?: string; replace?: boolean }) => {
     const json = !!program.opts().json;
     const store = makeStore();
     const TIMEOUT_MS = 30_000;
@@ -404,6 +423,7 @@ attach
     }
     const existing: Item | null = store.getItem(itemId);
     if (!existing || existing.id !== itemId) die(`no item found with id: ${itemId}`);
+    if (opts.filename !== undefined) attachmentFilename(store, itemId, opts.filename, opts.replace);
 
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
@@ -426,7 +446,12 @@ attach
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.byteLength > MAX_BYTES) die(`file too large (${Math.round(buffer.byteLength / 1024 / 1024)} MB — limit is 50 MB)`);
 
-    const filename = opts.filename ?? inferUrlFilename(response.headers.get("content-disposition"), response.url || url);
+    const filename = attachmentFilename(
+      store,
+      itemId,
+      opts.filename ?? inferUrlFilename(response.headers.get("content-disposition"), response.url || url),
+      opts.replace,
+    );
     const kind = opts.kind ?? inferKind(filename);
     const item: Item = store.addAttachment(itemId, filename, kind, buffer, opts.label ?? null);
     out(json, `Attached ${filename} to ${item.name} (${item.id}).`, item);

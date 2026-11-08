@@ -183,6 +183,56 @@ describe("MCP tool contract", () => {
   test("unknown tool is a tool error", async () => {
     expect((await call("no_such_tool")).isError).toBe(true);
   });
+
+  describe("attachments never overwrite (R2)", () => {
+    async function itemWithManual() {
+      const item = await addItem({ name: "Boiler" });
+      const res = await call("add_attachment", {
+        item_id: item.id, filename: "manual.pdf", kind: "manual", data_base64: "b3JpZ2luYWw=",
+      });
+      expect(res.isError).toBeFalsy();
+      return item;
+    }
+
+    test("add_attachment refuses an existing filename, ignoring case", async () => {
+      const item = await itemWithManual();
+      for (const filename of ["manual.pdf", "Manual.PDF"]) {
+        const res = await call("add_attachment", {
+          item_id: item.id, filename, kind: "manual", data_base64: "bmV3",
+        });
+        expect(res.isError).toBe(true);
+        expect(res.content[0].text).toBe(
+          'Error: Boiler already has an attachment named "manual.pdf". Delete it first or choose another filename.'
+        );
+      }
+      const kept = await call("get_attachment", { item_id: item.id, filename: "manual.pdf" });
+      expect(kept.content[0].text).toContain("b3JpZ2luYWw=");
+    });
+
+    test("attach_from_url refuses a given filename before downloading", async () => {
+      const item = await itemWithManual();
+      const res = await call("attach_from_url", {
+        item_id: item.id, url: "http://127.0.0.1:9/never-fetched.pdf", kind: "manual", filename: "manual.pdf",
+      });
+      expect(res.content[0].text).toContain("already has an attachment");
+    });
+
+    test("attach_from_url refuses an inferred filename", async () => {
+      const item = await itemWithManual();
+      const http = Bun.serve({
+        port: 0,
+        fetch: () => new Response("new", { headers: { "content-type": "application/pdf" } }),
+      });
+      try {
+        const res = await call("attach_from_url", {
+          item_id: item.id, url: `http://127.0.0.1:${http.port}/manual.pdf`, kind: "manual",
+        });
+        expect(res.content[0].text).toContain("already has an attachment");
+      } finally {
+        http.stop(true);
+      }
+    });
+  });
 });
 
 describe("inferFilename (F13)", () => {
