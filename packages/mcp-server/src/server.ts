@@ -103,7 +103,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "get_attachment",
-        description: "Retrieve an attachment's contents as a base64-encoded string. Useful for checking an attachment exists. Note: binary files like PDFs cannot be read or displayed directly.",
+        description: "Retrieve an attachment so you can view or read it. Images are returned as images, PDFs and other files as embedded resources, and text files as text, after a short summary (filename, kind, label, size). Files over 10 MB are not sent; only the summary is returned.",
         inputSchema: toInputSchema(getAttachmentInputSchema),
         annotations: { title: "Get attachment", ...READ },
       },

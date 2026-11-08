@@ -9,8 +9,16 @@ import { createServer, SERVER_INSTRUCTIONS, SERVER_VERSION } from "../server.js"
 import { resolveCacheDir } from "../config.js";
 import { inferFilename } from "../download.js";
 import { attachFromUrl } from "../tools/attach-from-url.js";
+import { getAttachment } from "../tools/get-attachment.js";
 
-type ToolResult = { content: { type: string; text: string }[]; isError?: boolean };
+type Content = {
+  type: string;
+  text: string;
+  data?: string;
+  mimeType?: string;
+  resource?: { uri: string; mimeType: string; text?: string; blob?: string };
+};
+type ToolResult = { content: Content[]; isError?: boolean };
 
 describe("MCP tool contract", () => {
   let dataDir: string;
@@ -210,7 +218,7 @@ describe("MCP tool contract", () => {
         );
       }
       const kept = await call("get_attachment", { item_id: item.id, filename: "manual.pdf" });
-      expect(kept.content[0].text).toContain("b3JpZ2luYWw=");
+      expect(kept.content[1].resource?.blob).toBe("b3JpZ2luYWw=");
     });
 
     test("attach_from_url refuses a given filename before downloading", async () => {
@@ -248,6 +256,62 @@ describe("MCP tool contract", () => {
       "Categories:\n- Appliance (1)\n  - Kitchen Appliance (1)\n- Heating (1)\nTags:\n- white goods (1)"
     );
     expect((await call("list_categories", { category: "x" })).isError).toBe(true);
+  });
+
+  describe("get_attachment returns typed content (R10)", () => {
+    async function attach(filename: string, data: string, label?: string) {
+      const item = await addItem({ name: `Item for ${filename}` });
+      const res = await call("add_attachment", {
+        item_id: item.id, filename, kind: "photo", data_base64: Buffer.from(data).toString("base64"), label,
+      });
+      expect(res.isError).toBeFalsy();
+      return item;
+    }
+
+    test("images are image content after a summary", async () => {
+      const item = await attach("Front.JPG", "jpeg-bytes", "Front view");
+      const res = await call("get_attachment", { item_id: item.id, filename: "Front.JPG" });
+      expect(res.content[0]).toEqual({ type: "text", text: "Front.JPG (kind: photo, label: Front view, size: 10 B)" });
+      expect(res.content[1] as unknown).toEqual({
+        type: "image", data: Buffer.from("jpeg-bytes").toString("base64"), mimeType: "image/jpeg",
+      });
+    });
+
+    test.each([
+      ["manual.pdf", "application/pdf"],
+      ["photo.heic", "application/octet-stream"],
+    ])("%s is an embedded blob resource", async (filename, mimeType) => {
+      const item = await attach(filename, "bytes");
+      const res = await call("get_attachment", { item_id: item.id, filename });
+      expect(res.content[1] as unknown).toEqual({
+        type: "resource",
+        resource: {
+          uri: `allourthings://items/${item.id}/attachments/${filename}`,
+          mimeType,
+          blob: Buffer.from("bytes").toString("base64"),
+        },
+      });
+    });
+
+    test("text files are embedded as text with an encoded URI", async () => {
+      const item = await attach("care notes.md", "# Care\nWash cold");
+      const res = await call("get_attachment", { item_id: item.id, filename: "care notes.md" });
+      expect(res.content[1].resource).toEqual({
+        uri: `allourthings://items/${item.id}/attachments/care%20notes.md`,
+        mimeType: "text/markdown",
+        text: "# Care\nWash cold",
+      });
+    });
+
+    test("files over the limit return only the summary", async () => {
+      const item = await attach("big.pdf", "x".repeat(2048));
+      const res = await getAttachment(backend, { item_id: item.id, filename: "big.pdf" }, 1024);
+      expect(res.content).toHaveLength(1);
+      expect((res.content[0] as { text: string }).text).toBe(
+        "big.pdf (kind: photo, size: 2.0 KB)\nThis file is too large to send to the assistant (limit 1.0 KB). " +
+          "It is stored in the user's vault with the item Item for big.pdf."
+      );
+    });
   });
 
   test("attach_from_url refuses local addresses (R3)", async () => {
