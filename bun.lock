@@ -5,17 +5,17 @@
     "": {
       "name": "allourthings",
       "dependencies": {
-        "@allourthings/core": "^2.0.0",
+        "@allourthings/core": "^2.1.0",
       },
     },
     "packages/cli": {
       "name": "@allourthings/cli",
-      "version": "1.0.1",
+      "version": "2.0.0",
       "bin": {
         "allourthings": "dist/index.js",
       },
       "dependencies": {
-        "@allourthings/core": "^2.0.0",
+        "@allourthings/core": "^2.1.0",
         "commander": "^13.1.0",
       },
       "devDependencies": {
@@ -26,12 +26,12 @@
     },
     "packages/mcp-server": {
       "name": "@allourthings/mcp-server",
-      "version": "1.0.1",
+      "version": "2.0.0",
       "bin": {
         "allourthings-mcp-server": "dist/index.js",
       },
       "dependencies": {
-        "@allourthings/core": "^2.0.0",
+        "@allourthings/core": "^2.1.0",
         "@modelcontextprotocol/sdk": "^1.27.1",
         "zod": "^4.6.7",
       },
@@ -45,7 +45,7 @@
   "packages": {
     "@allourthings/cli": ["@allourthings/cli@workspace:packages/cli"],
 
-    "@allourthings/core": ["@allourthings/core@2.0.0", "", {}, "sha512-43FnCSKsmbL7rt/HyxQ37k2zDL3wJzb2rN+Bdu+JgHgBwg7BUheZx8+tv4bPtAr3vvLrfBrm4Vht0KxQWaaCgQ=="],
+    "@allourthings/core": ["@allourthings/core@2.1.0", "", {}, "sha512-EW16gpK3ZTI9Kg/x6xC/C2FjqWiRl4ep3Z0X8ZdmREx2EqeJ4+o9FHkDdddCrmwI4R9Ld4031IzluhZ27Dn4lA=="],
 
     "@allourthings/mcp-server": ["@allourthings/mcp-server@workspace:packages/mcp-server"],
 

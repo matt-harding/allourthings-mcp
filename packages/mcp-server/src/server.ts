@@ -91,7 +91,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "search_items",
-        description: "Search item field values (case-insensitive). Every word in the query must appear in some field.",
+        description: "Search the inventory by words (names, brands, models, categories, tags, notes, custom fields and attachment names). Items containing any query word are returned, best match first; results matching every word are marked. English plurals and accents are handled, but not synonyms or typos.",
         inputSchema: toInputSchema(searchItemsInputSchema),
         annotations: { title: "Search items", ...READ },
       },

@@ -1,5 +1,5 @@
 import { createRequire } from "module";
-import type { Backend } from "./interface.js";
+import type { Backend, SearchHit } from "./interface.js";
 import type { Item, NewItem } from "../schema.js";
 import { resolveCacheDir } from "../config.js";
 
@@ -48,9 +48,9 @@ export class NativeBackend implements Backend {
     return this.store.deleteItem(id) as boolean;
   }
 
-  async searchItems(query: string): Promise<Item[]> {
+  async search(query: string, limit?: number): Promise<SearchHit[]> {
     this.refresh();
-    return this.store.searchItems(query) as Item[];
+    return this.store.search(query, limit ?? null) as SearchHit[];
   }
 
   async getItemFields(): Promise<string[]> {

@@ -156,6 +156,23 @@ describe("attach url (F13)", () => {
   });
 });
 
+describe("search (R11)", () => {
+  test("ranks results and respects --limit", () => {
+    addJson(["Kitchen Scales"]);
+    addJson(["Wine Fridge", "--subcategory", "Kitchen Appliance"]);
+    const all = JSON.parse(cli(["--json", "search", "kitchen appliances"]).stdout);
+    expect(all.map((i: { name: string }) => i.name)).toEqual(["Wine Fridge", "Kitchen Scales"]);
+    const top = JSON.parse(cli(["--json", "search", "kitchen appliances", "--limit", "1"]).stdout);
+    expect(top.map((i: { name: string }) => i.name)).toEqual(["Wine Fridge"]);
+  });
+
+  test("rejects a bad --limit", () => {
+    const res = cli(["search", "x", "--limit", "0"]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain("--limit must be a positive whole number");
+  });
+});
+
 describe("categories (R9)", () => {
   test("prints the tree and --json returns the summary", () => {
     addJson(["Oven", "--category", "Appliance", "--subcategory", "Kitchen Appliance"]);

@@ -314,6 +314,46 @@ describe("MCP tool contract", () => {
     });
   });
 
+  describe("ranked search (R11)", () => {
+    async function seed() {
+      const boiler = await addItem({ name: "Boiler", brand: "Vaillant", category: "Heating" });
+      await call("add_attachment", {
+        item_id: boiler.id, filename: "ecotec.pdf", kind: "manual", data_base64: "cGRm",
+      });
+      await addItem({ name: "Wine Fridge", category: "Appliance", subcategory: "Kitchen Appliance" });
+      await addItem({ name: "Oven", category: "Appliance", subcategory: "Kitchen Appliance" });
+      await addItem({ name: "Kitchen Scales", notes: "digital" });
+      return boiler;
+    }
+
+    test("natural queries find items, marking those that match every word", async () => {
+      const boiler = await seed();
+      const res = await call("search_items", { query: "vaillant boiler manual" });
+      expect(res.content[0].text).toBe(
+        `1 result(s), best match first:\n- Boiler [Heating] (${boiler.id}) — all words`
+      );
+
+      const kitchen = (await call("search_items", { query: "kitchen appliances" })).content[0].text;
+      const lines = kitchen.split("\n").slice(1);
+      expect(lines).toHaveLength(3);
+      expect(lines.slice(0, 2).every((l) => l.endsWith("— all words"))).toBe(true);
+      expect(lines[2]).toStartWith("- Kitchen Scales");
+      expect(lines[2]).not.toContain("all words");
+    });
+
+    test("limit caps results and says there are more", async () => {
+      await seed();
+      const text = (await call("search_items", { query: "kitchen", limit: 1 })).content[0].text;
+      expect(text.split("\n")).toHaveLength(3);
+      expect(text).toEndWith("Showing the top 1; pass a higher limit to see more.");
+    });
+
+    test("limit is validated", async () => {
+      expect((await call("search_items", { query: "x", limit: 0 })).isError).toBe(true);
+      expect((await call("search_items", { query: "x", limit: 101 })).isError).toBe(true);
+    });
+  });
+
   test("attach_from_url refuses local addresses (R3)", async () => {
     const item = await addItem({ name: "NAS" });
     const res = await call("attach_from_url", {

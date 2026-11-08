@@ -217,12 +217,18 @@ program
 
 program
   .command("search <query>")
-  .description("search item field values; every word must match")
-  .action((query: string) => {
+  .description("search by words; items with any word match, best first")
+  .option("-n, --limit <n>", "maximum number of results")
+  .action((query: string, opts: { limit?: string }) => {
     const json = !!program.opts().json;
+    let limit: number | null = null;
+    if (opts.limit !== undefined) {
+      if (!/^\d+$/.test(opts.limit) || Number(opts.limit) < 1) die(`--limit must be a positive whole number (got "${opts.limit}")`);
+      limit = Number(opts.limit);
+    }
     const store = makeStore();
-    const items: Item[] = store.searchItems(query);
-    out(json, formatItems(items, `${items.length} result${items.length === 1 ? "" : "s"} for "${query}"`), items);
+    const items: Item[] = (store.search(query, limit) as Array<{ item: Item }>).map((h) => h.item);
+    out(json, formatItems(items, `${items.length} result${items.length === 1 ? "" : "s"} for "${query}", best match first`), items);
   });
 
 // ── list ──────────────────────────────────────────────────────────────────────
