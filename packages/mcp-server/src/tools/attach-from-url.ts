@@ -13,7 +13,7 @@ export const attachFromUrlInputSchema = z.object({
   filename: z
     .string()
     .optional()
-    .describe("Filename to store the attachment as — if omitted, taken from the server's Content-Disposition header or the final URL"),
+    .describe("Recommended: a readable name such as 'nutribullet-600-manual.pdf'. If omitted, the name comes from the server's Content-Disposition header or the URL and may be meaningless"),
   label: z.string().optional().describe("Human-readable label (e.g. 'User Manual')"),
 }).strict();
 
