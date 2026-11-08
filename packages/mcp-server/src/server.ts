@@ -34,6 +34,10 @@ function toInputSchema(schema: z.ZodType) {
   return z.toJSONSchema(schema, { io: "input" }) as { type: "object"; [key: string]: unknown };
 }
 
+const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
+const DESTRUCTIVE = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false };
+
 function describeError(err: unknown): string {
   if (err instanceof ZodError) {
     const issues = err.issues.map((i) => {
@@ -57,56 +61,68 @@ export function createServer(backend: Backend) {
         name: "add_item",
         description: "Add a new item to the inventory. Names must be unique. Custom fields are accepted alongside the listed ones; id, created_at, updated_at and attachments are managed automatically.",
         inputSchema: toInputSchema(addItemInputSchema),
+        annotations: { title: "Add item", ...WRITE },
       },
       {
         name: "get_item",
         description: "Get a single item by ID or name. If a name matches several items, an error lists their IDs.",
         inputSchema: toInputSchema(getItemInputSchema),
+        annotations: { title: "Get item", ...READ },
       },
       {
         name: "list_items",
         description: "List all items, optionally filtered by category, subcategory, or tags",
         inputSchema: toInputSchema(listItemsInputSchema),
+        annotations: { title: "List items", ...READ },
       },
       {
         name: "update_item",
         description: "Update fields on an existing item. Set a field to null to clear it. id, created_at, updated_at and attachments cannot be changed here.",
         inputSchema: toInputSchema(updateItemInputSchema),
+        // Destructive: overwrites values, and null clears a field.
+        annotations: { title: "Update item", ...DESTRUCTIVE },
       },
       {
         name: "delete_item",
         description: "Delete an item by ID",
         inputSchema: toInputSchema(deleteItemInputSchema),
+        annotations: { title: "Delete item", ...DESTRUCTIVE },
       },
       {
         name: "search_items",
         description: "Search item field values (case-insensitive). Every word in the query must appear in some field.",
         inputSchema: toInputSchema(searchItemsInputSchema),
+        annotations: { title: "Search items", ...READ },
       },
       {
         name: "add_attachment",
         description: "Attach a file (manual, receipt, photo, warranty, etc.) to an item. File contents must be base64-encoded.",
         inputSchema: toInputSchema(addAttachmentInputSchema),
+        annotations: { title: "Add attachment", ...WRITE },
       },
       {
         name: "get_attachment",
         description: "Retrieve an attachment's contents as a base64-encoded string. Useful for checking an attachment exists. Note: binary files like PDFs cannot be read or displayed directly.",
         inputSchema: toInputSchema(getAttachmentInputSchema),
+        annotations: { title: "Get attachment", ...READ },
       },
       {
         name: "delete_attachment",
         description: "Delete an attachment from an item",
         inputSchema: toInputSchema(deleteAttachmentInputSchema),
+        annotations: { title: "Delete attachment", ...DESTRUCTIVE },
       },
       {
         name: "attach_from_url",
         description: "Download a file from a URL and attach it to an item (e.g. a PDF manual or warranty document)",
         inputSchema: toInputSchema(attachFromUrlInputSchema),
+        annotations: { title: "Attach file from URL", ...WRITE, openWorldHint: true },
       },
       {
         name: "get_item_fields",
         description: "Return all field names currently in use across your catalog. Call this before adding or updating items to discover what fields exist and use consistent naming.",
         inputSchema: toInputSchema(getItemFieldsInputSchema),
+        annotations: { title: "List fields in use", ...READ },
       },
     ],
   }));

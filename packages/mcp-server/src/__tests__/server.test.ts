@@ -52,6 +52,31 @@ describe("MCP tool contract", () => {
     expect(SERVER_INSTRUCTIONS).toContain("Never invent item IDs");
   });
 
+  test("every tool declares the agreed annotations (R1)", async () => {
+    // [title, readOnly, destructive, idempotent, openWorld]
+    const expected: Record<string, [string, boolean, boolean, boolean, boolean]> = {
+      list_items: ["List items", true, false, true, false],
+      search_items: ["Search items", true, false, true, false],
+      get_item: ["Get item", true, false, true, false],
+      get_item_fields: ["List fields in use", true, false, true, false],
+      get_attachment: ["Get attachment", true, false, true, false],
+      add_item: ["Add item", false, false, false, false],
+      update_item: ["Update item", false, true, true, false],
+      delete_item: ["Delete item", false, true, true, false],
+      delete_attachment: ["Delete attachment", false, true, true, false],
+      add_attachment: ["Add attachment", false, false, false, false],
+      attach_from_url: ["Attach file from URL", false, false, false, true],
+    };
+    const { tools } = await client.listTools();
+    const actual = Object.fromEntries(
+      tools.map((t) => {
+        const a = t.annotations ?? {};
+        return [t.name, [a.title, a.readOnlyHint, a.destructiveHint, a.idempotentHint, a.openWorldHint]];
+      })
+    );
+    expect(actual).toEqual(expected);
+  });
+
   test("get_item on a missing item is not an error (R5)", async () => {
     const res = await call("get_item", { id_or_name: "00000000" });
     expect(res.isError).toBeFalsy();
