@@ -136,20 +136,21 @@ describe("NativeBackend", () => {
     expect(results[0].name).toBe("Drill");
   });
 
-  // ── searchItems ────────────────────────────────────────────────────────────
+  // ── search ─────────────────────────────────────────────────────────────────────────
 
-  test("searchItems returns items matching query", async () => {
+  test("search returns ranked hits", async () => {
     await backend.addItem({ name: "Bosch Drill", brand: "Bosch" });
     await backend.addItem({ name: "Makita Saw" });
 
-    const results = await backend.searchItems("bosch");
+    const results = await backend.search("bosch");
     expect(results).toHaveLength(1);
-    expect(results[0].name).toBe("Bosch Drill");
+    expect(results[0].item.name).toBe("Bosch Drill");
+    expect(results[0].matchedAll).toBe(true);
   });
 
-  test("searchItems returns empty array when nothing matches", async () => {
+  test("search returns empty array when nothing matches", async () => {
     await backend.addItem({ name: "Kettle" });
-    expect(await backend.searchItems("xyz-no-match")).toHaveLength(0);
+    expect(await backend.search("xyz-no-match")).toHaveLength(0);
   });
 
   // ── cache write-through ────────────────────────────────────────────────────

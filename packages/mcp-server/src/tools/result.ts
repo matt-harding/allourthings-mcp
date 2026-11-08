@@ -3,5 +3,5 @@ export function textResult(text: string) {
 }
 
 export function errorResult(message: string) {
-  return { content: [{ type: "text" as const, text: message }], isError: true };
+  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
 }

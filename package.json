@@ -5,6 +5,6 @@
     "packages/*"
   ],
   "dependencies": {
-    "@allourthings/core": "^2.0.0"
+    "@allourthings/core": "^2.1.0"
   }
 }

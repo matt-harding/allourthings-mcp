@@ -6,6 +6,8 @@ import { homedir, platform } from "os";
 import { join, basename, dirname } from "path";
 import { Command } from "commander";
 import { formatItem, formatItems, out, type Item } from "./format.js";
+import { download, DownloadError, isPlainFilename } from "../../mcp-server/src/download.js";
+import { formatCategories, summariseCategories } from "../../mcp-server/src/categories.js";
 
 // ── Config file ───────────────────────────────────────────────────────────────
 
@@ -53,7 +55,8 @@ function resolveDataDir(): string {
   const fromConfig = readConfigFile();
   if (fromConfig) return fromConfig;
   throw new Error(
-    "No vault configured. Run `allourthings init` to set up, or set the ALLOURTHINGS_DATA_DIR environment variable."
+    "No AllOurThings vault is configured. Run `allourthings init` to choose or create one, pass `--data-dir <folder>`, or set `ALLOURTHINGS_DATA_DIR`. " +
+      "If you use the AllOurThings iOS app, choose the same folder it uses (e.g. in iCloud Drive)."
   );
 }
 
@@ -199,32 +202,6 @@ function parseSet(pair: string): [string, unknown] {
   return [key, value];
 }
 
-function isPlainFilename(name: string): boolean {
-  return name.length > 0 && name !== "." && name !== ".." && !/[\\/]/.test(name);
-}
-
-function safeDecode(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-}
-
-function inferUrlFilename(contentDisposition: string | null, finalUrl: string): string {
-  if (contentDisposition) {
-    const extended = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(contentDisposition);
-    const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/i.exec(contentDisposition);
-    const raw = extended
-      ? safeDecode(extended[2].trim().replace(/^"|"$/g, ""))
-      : plain ? (plain[2] ?? plain[1]).trim() : null;
-    const name = raw ? basename(raw.replace(/\\/g, "/")) : "";
-    if (isPlainFilename(name)) return name;
-  }
-  const fromUrl = basename(safeDecode(new URL(finalUrl).pathname));
-  return isPlainFilename(fromUrl) ? fromUrl : "attachment";
-}
-
 // ── Program ───────────────────────────────────────────────────────────────────
 
 const program = new Command();
@@ -240,12 +217,18 @@ program
 
 program
   .command("search <query>")
-  .description("search item field values; every word must match")
-  .action((query: string) => {
+  .description("search by words; items with any word match, best first")
+  .option("-n, --limit <n>", "maximum number of results")
+  .action((query: string, opts: { limit?: string }) => {
     const json = !!program.opts().json;
+    let limit: number | null = null;
+    if (opts.limit !== undefined) {
+      if (!/^\d+$/.test(opts.limit) || Number(opts.limit) < 1) die(`--limit must be a positive whole number (got "${opts.limit}")`);
+      limit = Number(opts.limit);
+    }
     const store = makeStore();
-    const items: Item[] = store.searchItems(query);
-    out(json, formatItems(items, `${items.length} result${items.length === 1 ? "" : "s"} for "${query}"`), items);
+    const items: Item[] = (store.search(query, limit) as Array<{ item: Item }>).map((h) => h.item);
+    out(json, formatItems(items, `${items.length} result${items.length === 1 ? "" : "s"} for "${query}", best match first`), items);
   });
 
 // ── list ──────────────────────────────────────────────────────────────────────
@@ -366,12 +349,30 @@ program
 
 const attach = program.command("attach").description("manage item attachments");
 
+/**
+ * Filename to store under, or exits if the item already has it and --replace wasn't given.
+ * Case-insensitive, as macOS and Windows are; a replacement keeps the existing spelling.
+ */
+function attachmentFilename(store: ReturnType<typeof makeStore>, itemId: string, filename: string, replace?: boolean): string {
+  let item: Item | null = null;
+  try {
+    item = store.getItem(itemId);
+  } catch {}
+  if (!item || item.id !== itemId) return filename;
+  const lower = filename.toLowerCase();
+  const clash = item.attachments?.find((a) => a.filename.toLowerCase() === lower);
+  if (!clash) return filename;
+  if (!replace) die(`${item.name} already has an attachment named "${clash.filename}". Pass --replace to overwrite it.`);
+  return clash.filename;
+}
+
 attach
   .command("add <item-id> <file>")
   .description("attach a local file to an item")
   .option("-k, --kind <kind>", "manual | receipt | photo | warranty | other (inferred from filename if omitted)")
   .option("--label <label>", "human-readable label")
-  .action((itemId: string, file: string, opts: { kind?: string; label?: string }) => {
+  .option("--replace", "overwrite an existing attachment with the same filename")
+  .action((itemId: string, file: string, opts: { kind?: string; label?: string; replace?: boolean }) => {
     const json = !!program.opts().json;
     const store = makeStore();
     let data: Buffer;
@@ -380,7 +381,7 @@ attach
     } catch {
       die(`cannot read file: ${file}`);
     }
-    const filename = basename(file);
+    const filename = attachmentFilename(store, itemId, basename(file), opts.replace);
     const kind = opts.kind ?? inferKind(filename);
     const item: Item = store.addAttachment(itemId, filename, kind, data, opts.label ?? null);
     out(json, `Attached ${filename} to ${item.name} (${item.id}).`, item);
@@ -388,15 +389,14 @@ attach
 
 attach
   .command("url <item-id> <url>")
-  .description("download a file from a URL and attach it to an item")
+  .description("download a file from a public URL and attach it to an item")
   .option("-f, --filename <filename>", "filename to store as (from Content-Disposition or the URL if omitted)")
   .option("-k, --kind <kind>", "manual | receipt | photo | warranty | other")
   .option("--label <label>")
-  .action(async (itemId: string, url: string, opts: { filename?: string; kind?: string; label?: string }) => {
+  .option("--replace", "overwrite an existing attachment with the same filename")
+  .action(async (itemId: string, url: string, opts: { filename?: string; kind?: string; label?: string; replace?: boolean }) => {
     const json = !!program.opts().json;
     const store = makeStore();
-    const TIMEOUT_MS = 30_000;
-    const MAX_BYTES = 50 * 1024 * 1024;
 
     // Validate before downloading so a bad call never fetches the URL.
     if (opts.filename !== undefined && !isPlainFilename(opts.filename)) {
@@ -404,31 +404,19 @@ attach
     }
     const existing: Item | null = store.getItem(itemId);
     if (!existing || existing.id !== itemId) die(`no item found with id: ${itemId}`);
+    if (opts.filename !== undefined) attachmentFilename(store, itemId, opts.filename, opts.replace);
 
-    const abort = new AbortController();
-    const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
-    let response: Response;
+    let downloaded: Awaited<ReturnType<typeof download>>;
     try {
-      response = await fetch(url, { signal: abort.signal });
-    } catch (err: unknown) {
-      clearTimeout(timer);
-      die(err instanceof Error && err.name === "AbortError"
-        ? `download timed out after ${TIMEOUT_MS / 1000}s`
-        : `network error: ${err instanceof Error ? err.message : String(err)}`);
+      downloaded = await download(url);
+    } catch (err) {
+      if (err instanceof DownloadError) die(err.message);
+      throw err;
     }
-    clearTimeout(timer);
 
-    if (!response.ok) die(`download failed: HTTP ${response.status} ${response.statusText}`);
-
-    const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.startsWith("text/html")) die("URL returned an HTML page, not a file. Try finding a direct download link.");
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.byteLength > MAX_BYTES) die(`file too large (${Math.round(buffer.byteLength / 1024 / 1024)} MB — limit is 50 MB)`);
-
-    const filename = opts.filename ?? inferUrlFilename(response.headers.get("content-disposition"), response.url || url);
+    const filename = attachmentFilename(store, itemId, opts.filename ?? downloaded.filename, opts.replace);
     const kind = opts.kind ?? inferKind(filename);
-    const item: Item = store.addAttachment(itemId, filename, kind, buffer, opts.label ?? null);
+    const item: Item = store.addAttachment(itemId, filename, kind, downloaded.data, opts.label ?? null);
     out(json, `Attached ${filename} to ${item.name} (${item.id}).`, item);
   });
 
@@ -478,6 +466,17 @@ program
         process.stdout.write(`Fields in use:\n${fields.map((f) => `  ${f}`).join("\n")}\n`);
       }
     }
+  });
+
+// ── categories ─────────────────────────────────────────────────────────────────
+
+program
+  .command("categories")
+  .description("list categories, subcategories and tags with item counts")
+  .action(() => {
+    const json = !!program.opts().json;
+    const summary = summariseCategories(makeStore().listItems(null) as Item[]);
+    out(json, formatCategories(summary), summary);
   });
 
 // ── init ──────────────────────────────────────────────────────────────────────

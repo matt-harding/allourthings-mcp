@@ -80,24 +80,31 @@ export ALLOURTHINGS_DATA_DIR="$HOME/Documents/AllOurThings"
 
 Add this to your shell profile (`~/.zshrc`, `~/.bashrc`) to make it permanent.
 
-The vault is a plain folder of JSON files — create it anywhere you like, or
-point it at an existing folder to start cataloguing immediately.
+The vault is a plain folder of JSON files. The folder must already exist:
+create an empty one anywhere you like, or point at an existing vault (for
+example the folder the AllOurThings iOS app uses) to start immediately.
+Requires Node.js 20 or later.
 
 ## Available Tools
 
 | Tool | Description |
 |------|-------------|
+| `search_items` | Ranked search by words: items with any query word are returned, best first, and items matching every word are marked. Handles English plurals and accents, not synonyms or typos. Optional `limit` (default 20) |
 | `list_items` | List all items, optionally filtered by category, subcategory, or tags |
-| `search_items` | Search field values; every word in the query must match |
+| `list_categories` | Categories, subcategories and tags with counts — check before adding or recategorising so names stay consistent |
 | `get_item` | Retrieve a single item by ID or name (errors with the matching IDs if a name is ambiguous) |
+| `get_item_fields` | List all field names in use across the vault |
 | `add_item` | Add a new item to the vault (names must be unique) |
 | `update_item` | Update fields on an existing item; set a field to `null` to clear it |
 | `delete_item` | Delete an item and all its attachments |
-| `get_item_fields` | List all field names in use across the vault |
-| `add_attachment` | Attach a base64-encoded photo, receipt, manual, or warranty document (`kind` is required) |
-| `get_attachment` | Retrieve an attachment's contents as base64 |
-| `attach_from_url` | Download a file from a URL and attach it to an item |
-| `delete_attachment` | Remove an attachment from an item |
+| `add_attachment` | Attach a base64-encoded photo, receipt, manual, or warranty document (`kind` is required); never replaces an existing filename |
+| `get_attachment` | Retrieve an attachment as an image, PDF or text you can read (files over 10 MB return a summary only) |
+| `attach_from_url` | Download a file from the public internet and attach it; local and private network addresses are refused; never replaces an existing filename |
+| `delete_attachment` | Remove an attachment from an item (delete first to replace a file) |
+
+If a search finds nothing, try other words ("fridge" for "refrigerator") or
+browse with `list_categories` and `list_items`. Confirm with the user before
+deleting items or attachments, or clearing fields.
 
 ## Example Interactions
 
@@ -108,7 +115,7 @@ point it at an existing folder to start cataloguing immediately.
 → `search_items` for "dishwasher", check `warranty_expires`
 
 **"I just bought a Dyson V15 vacuum for £499"**
-→ `add_item` with name, brand, purchase price, and date
+→ `list_categories` to reuse an existing category, then `add_item` with name, brand, purchase price, and date
 
 **"Show me everything I bought from Amazon last year"**
 → `search_items` for "Amazon", then check `purchase_date`

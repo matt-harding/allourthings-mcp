@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { createHash } from "crypto";
 import { homedir, platform } from "os";
 import { join } from "path";
@@ -51,6 +51,11 @@ export function readConfigFile(): string | null {
   return null;
 }
 
+export const NO_VAULT_MESSAGE =
+  "No AllOurThings vault is configured. Choose the folder that holds your inventory by doing one of these: " +
+  "pass `--data-dir <folder>` in your AI app's MCP settings, set `ALLOURTHINGS_DATA_DIR`, or run `npx @allourthings/cli init`. " +
+  "If you use the AllOurThings iOS app, choose the same folder it uses (e.g. in iCloud Drive).";
+
 export function resolveDataDir(
   argv: string[] = process.argv,
   env: Record<string, string | undefined> = process.env,
@@ -65,9 +70,20 @@ export function resolveDataDir(
   }
   const fromConfig = configReader();
   if (fromConfig) return expandTilde(fromConfig);
-  throw new Error(
-    "No vault configured. Run `allourthings init` to set up, or set the ALLOURTHINGS_DATA_DIR environment variable."
-  );
+  throw new Error(NO_VAULT_MESSAGE);
+}
+
+/** Throws unless `dataDir` is an existing folder, so a mistyped path isn't silently created on first write. */
+export function assertVaultFolder(dataDir: string): void {
+  let isDir: boolean;
+  try {
+    isDir = statSync(dataDir).isDirectory();
+  } catch {
+    throw new Error(
+      `The vault folder doesn't exist: ${dataDir}. Check the path in your AI app's MCP settings, or run \`npx @allourthings/cli init\` to create a new vault.`
+    );
+  }
+  if (!isDir) throw new Error(`The vault path is a file, not a folder: ${dataDir}`);
 }
 
 /**

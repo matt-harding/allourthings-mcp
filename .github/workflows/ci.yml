@@ -8,8 +8,11 @@ on:
 
 jobs:
   test:
-    name: Test & Build
+    name: Test & Build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["22", "24"]
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
         run: bun install
@@ -43,3 +46,24 @@ jobs:
       - name: Build
         working-directory: packages/mcp-server
         run: bun run build
+
+      - name: Type check (CLI)
+        working-directory: packages/cli
+        run: bun run typecheck
+
+      - name: Run tests (CLI)
+        working-directory: packages/cli
+        run: bun test
+
+      - name: Build (CLI)
+        working-directory: packages/cli
+        run: bun run build
+
+      # Tests run under Bun; check the published builds start under Node.
+      - name: Node smoke test
+        run: |
+          node packages/mcp-server/dist/index.js --version
+          node packages/cli/dist/index.js --version
+          mkdir -p "$RUNNER_TEMP/vault"
+          node packages/cli/dist/index.js --data-dir "$RUNNER_TEMP/vault" add "Smoke Test" --category Test
+          node packages/cli/dist/index.js --data-dir "$RUNNER_TEMP/vault" search smoke

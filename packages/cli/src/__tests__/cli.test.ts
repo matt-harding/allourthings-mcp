@@ -147,6 +147,80 @@ describe("attach url (F13)", () => {
     expect(res.code).toBe(1);
     expect(res.stderr).toBe("error: no item found with id: deadbeef\n");
   });
+
+  test("refuses local addresses (R3)", () => {
+    const item = addJson(["NAS"]);
+    const res = cli(["attach", "url", item.id, "http://127.0.0.1:9/secret.pdf"]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toBe("error: That address points to a private or local network and can't be fetched.\n");
+  });
+});
+
+describe("search (R11)", () => {
+  test("ranks results and respects --limit", () => {
+    addJson(["Kitchen Scales"]);
+    addJson(["Wine Fridge", "--subcategory", "Kitchen Appliance"]);
+    const all = JSON.parse(cli(["--json", "search", "kitchen appliances"]).stdout);
+    expect(all.map((i: { name: string }) => i.name)).toEqual(["Wine Fridge", "Kitchen Scales"]);
+    const top = JSON.parse(cli(["--json", "search", "kitchen appliances", "--limit", "1"]).stdout);
+    expect(top.map((i: { name: string }) => i.name)).toEqual(["Wine Fridge"]);
+  });
+
+  test("rejects a bad --limit", () => {
+    const res = cli(["search", "x", "--limit", "0"]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain("--limit must be a positive whole number");
+  });
+});
+
+describe("categories (R9)", () => {
+  test("prints the tree and --json returns the summary", () => {
+    addJson(["Oven", "--category", "Appliance", "--subcategory", "Kitchen Appliance"]);
+    addJson(["Boiler", "--category", "Heating"]);
+    const text = cli(["categories"]);
+    expect(text.code).toBe(0);
+    expect(text.stdout).toBe("Categories:\n- Appliance (1)\n  - Kitchen Appliance (1)\n- Heating (1)\nTags: none\n");
+    const json = JSON.parse(cli(["--json", "categories"]).stdout);
+    expect(json.categories.map((c: { name: string }) => c.name)).toEqual(["Appliance", "Heating"]);
+    expect(json.tags).toEqual([]);
+  });
+});
+
+describe("attachments never overwrite by default (R2)", () => {
+  async function itemWithManual() {
+    const item = addJson(["Boiler"]);
+    const file = join(home, "manual.pdf");
+    await writeFile(file, "original");
+    expect(cli(["attach", "add", item.id, file]).code).toBe(0);
+    return item;
+  }
+
+  test("attach add refuses an existing filename, ignoring case", async () => {
+    const item = await itemWithManual();
+    const upper = join(home, "Manual.PDF");
+    await writeFile(upper, "new");
+    const res = cli(["attach", "add", item.id, upper]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toBe('error: Boiler already has an attachment named "manual.pdf". Pass --replace to overwrite it.\n');
+    expect(cli(["attach", "get", item.id, "manual.pdf", "-o", "-"]).stdout).toBe("original");
+  });
+
+  test("attach add --replace overwrites and keeps one record", async () => {
+    const item = await itemWithManual();
+    const upper = join(home, "Manual.PDF");
+    await writeFile(upper, "new");
+    const res = cli(["--json", "attach", "add", item.id, upper, "--replace"]);
+    expect(res.code).toBe(0);
+    expect(JSON.parse(res.stdout).attachments.map((a: { filename: string }) => a.filename)).toEqual(["manual.pdf"]);
+    expect(cli(["attach", "get", item.id, "manual.pdf", "-o", "-"]).stdout).toBe("new");
+  });
+
+  test("attach url refuses a given filename before downloading", async () => {
+    const item = await itemWithManual();
+    const res = cli(["attach", "url", item.id, "http://127.0.0.1:9/never.pdf", "-f", "manual.pdf"]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain("already has an attachment");
+  });
 });
 
 describe("human output (F17)", () => {
