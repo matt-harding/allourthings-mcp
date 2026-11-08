@@ -9,6 +9,9 @@
     "url": "https://github.com/matt-harding/allourthings-mcp.git"
   },
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "files": [
     "dist"
   ],

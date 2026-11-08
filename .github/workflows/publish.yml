@@ -37,7 +37,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to npm
@@ -68,13 +68,17 @@ jobs:
         working-directory: packages/cli
         run: bun run typecheck
 
+      - name: Run tests
+        working-directory: packages/cli
+        run: bun test
+
       - name: Build
         working-directory: packages/cli
         run: bun run build
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to npm
