@@ -147,6 +147,13 @@ describe("attach url (F13)", () => {
     expect(res.code).toBe(1);
     expect(res.stderr).toBe("error: no item found with id: deadbeef\n");
   });
+
+  test("refuses local addresses (R3)", () => {
+    const item = addJson(["NAS"]);
+    const res = cli(["attach", "url", item.id, "http://127.0.0.1:9/secret.pdf"]);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toBe("error: That address points to a private or local network and can't be fetched.\n");
+  });
 });
 
 describe("attachments never overwrite by default (R2)", () => {

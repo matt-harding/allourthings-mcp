@@ -114,7 +114,7 @@ export function createServer(backend: Backend) {
       },
       {
         name: "attach_from_url",
-        description: "Download a file from a URL and attach it to an item (e.g. a PDF manual or warranty document). Never replaces an existing attachment with the same filename.",
+        description: "Download a file from the public internet and attach it to an item (e.g. a PDF manual or warranty document). Only the downloaded file is stored, in the user's local vault. Private and local network addresses are refused. Never replaces an existing attachment with the same filename.",
         inputSchema: toInputSchema(attachFromUrlInputSchema),
         annotations: { title: "Attach file from URL", ...WRITE, openWorldHint: true },
       },

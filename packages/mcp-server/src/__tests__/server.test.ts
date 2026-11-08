@@ -7,12 +7,14 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { NativeBackend } from "../backends/native.js";
 import { createServer, SERVER_INSTRUCTIONS, SERVER_VERSION } from "../server.js";
 import { resolveCacheDir } from "../config.js";
-import { inferFilename } from "../tools/attach-from-url.js";
+import { inferFilename } from "../download.js";
+import { attachFromUrl } from "../tools/attach-from-url.js";
 
 type ToolResult = { content: { type: string; text: string }[]; isError?: boolean };
 
 describe("MCP tool contract", () => {
   let dataDir: string;
+  let backend: NativeBackend;
   let client: Client;
 
   async function call(name: string, args: Record<string, unknown> = {}): Promise<ToolResult> {
@@ -30,7 +32,8 @@ describe("MCP tool contract", () => {
 
   beforeEach(async () => {
     dataDir = await mkdtemp(join(tmpdir(), "aot-server-test-"));
-    const server = createServer(new NativeBackend(dataDir));
+    backend = new NativeBackend(dataDir);
+    const server = createServer(backend);
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     client = new Client({ name: "test", version: "0" });
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
@@ -224,14 +227,26 @@ describe("MCP tool contract", () => {
         fetch: () => new Response("new", { headers: { "content-type": "application/pdf" } }),
       });
       try {
-        const res = await call("attach_from_url", {
-          item_id: item.id, url: `http://127.0.0.1:${http.port}/manual.pdf`, kind: "manual",
-        });
+        const res = await attachFromUrl(
+          backend,
+          { item_id: item.id, url: `http://127.0.0.1:${http.port}/manual.pdf`, kind: "manual" },
+          { allowPrivate: true }
+        );
         expect(res.content[0].text).toContain("already has an attachment");
       } finally {
         http.stop(true);
       }
     });
+  });
+
+  test("attach_from_url refuses local addresses (R3)", async () => {
+    const item = await addItem({ name: "NAS" });
+    const res = await call("attach_from_url", {
+      item_id: item.id, url: "http://127.0.0.1:9/secret.pdf", kind: "other",
+    });
+    expect(res.content[0].text).toBe(
+      "Error: That address points to a private or local network and can't be fetched."
+    );
   });
 });
 
