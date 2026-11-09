@@ -1,7 +1,13 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.allourthings/mcp-server",
+  "title": "AllOurThings",
   "description": "AI-powered household inventory — query everything you own via natural language",
+  "websiteUrl": "https://allourthings.io",
+  "icons": [
+    { "src": "https://allourthings.io/allourthings-icon-512.png", "mimeType": "image/png", "sizes": ["512x512"] },
+    { "src": "https://allourthings.io/allourthings-icon.svg", "mimeType": "image/svg+xml", "sizes": ["any"] }
+  ],
   "repository": {
     "url": "https://github.com/matt-harding/allourthings-mcp",
     "source": "github"
