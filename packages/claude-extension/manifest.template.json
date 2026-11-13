@@ -44,7 +44,7 @@
     }
   },
   "compatibility": {
-    "platforms": ["__PLATFORM__"],
+    "platforms": __PLATFORMS__,
     "runtimes": {
       "node": ">=20"
     }

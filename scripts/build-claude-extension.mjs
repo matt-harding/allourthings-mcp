@@ -11,14 +11,22 @@ const releaseRoot = join(extensionRoot, "release");
 const coreRoot = join(repositoryRoot, "node_modules", "@allourthings", "core");
 const targets = {
   "darwin-arm64": {
-    platform: "darwin",
-    arch: "arm64",
-    coreAddon: "allourthings-core.darwin-arm64.node",
+    hosts: ["darwin-arm64"],
+    platforms: ["darwin"],
+    coreAddons: ["allourthings-core.darwin-arm64.node"],
   },
   "win32-x64": {
-    platform: "win32",
-    arch: "x64",
-    coreAddon: "allourthings-core.win32-x64-msvc.node",
+    hosts: ["win32-x64"],
+    platforms: ["win32"],
+    coreAddons: ["allourthings-core.win32-x64-msvc.node"],
+  },
+  universal: {
+    hosts: ["darwin-arm64", "win32-x64"],
+    platforms: ["darwin", "win32"],
+    coreAddons: [
+      "allourthings-core.darwin-arm64.node",
+      "allourthings-core.win32-x64-msvc.node",
+    ],
   },
 };
 
@@ -33,13 +41,14 @@ function copy(source, destination) {
 
 function resolveTarget() {
   const targetIndex = process.argv.indexOf("--target");
-  const name = targetIndex === -1 ? `${process.platform}-${process.arch}` : process.argv[targetIndex + 1];
+  const host = `${process.platform}-${process.arch}`;
+  const name = targetIndex === -1 ? host : process.argv[targetIndex + 1];
   if (!name || !(name in targets)) {
-    throw new Error("Supported targets are darwin-arm64 and win32-x64.");
+    throw new Error("Supported targets are darwin-arm64, win32-x64, and universal.");
   }
   const target = targets[name];
-  if (target.platform !== process.platform || target.arch !== process.arch) {
-    throw new Error(`Target ${name} must be built on a matching ${target.platform}/${target.arch} host.`);
+  if (!target.hosts.includes(host)) {
+    throw new Error(`Target ${name} must be built on one of: ${target.hosts.join(", ")}.`);
   }
   return { name, ...target };
 }
@@ -63,14 +72,14 @@ function validateStage() {
   if (parsed.user_config?.data_dir?.type !== "directory" || !parsed.user_config.data_dir.required) {
     throw new Error("The extension manifest must require a vault directory picker.");
   }
-  if (parsed.compatibility?.platforms?.join(",") !== target.platform) {
-    throw new Error(`The extension manifest must be limited to ${target.platform}.`);
+  if (JSON.stringify(parsed.compatibility?.platforms) !== JSON.stringify(target.platforms)) {
+    throw new Error(`The extension manifest must support: ${target.platforms.join(", ")}.`);
   }
   for (const relativePath of [
     "server/dist/index.js",
     "server/package.json",
     "server/node_modules/@allourthings/core/index.js",
-    `server/node_modules/@allourthings/core/${target.coreAddon}`,
+    ...target.coreAddons.map((addon) => `server/node_modules/@allourthings/core/${addon}`),
   ]) {
     if (!existsSync(join(stageRoot, relativePath))) throw new Error(`Missing staged file: ${relativePath}`);
   }
@@ -101,7 +110,7 @@ const requiredCoreFiles = [
   "index.js",
   "package.json",
   "LICENSE",
-  target.coreAddon,
+  ...target.coreAddons,
 ];
 
 for (const file of requiredCoreFiles) {
@@ -117,7 +126,7 @@ mkdirSync(stageRoot, { recursive: true });
 
 const manifest = readFileSync(join(extensionRoot, "manifest.template.json"), "utf8")
   .replaceAll("__VERSION__", version)
-  .replaceAll("__PLATFORM__", target.platform);
+  .replaceAll("__PLATFORMS__", JSON.stringify(target.platforms));
 writeFileSync(join(stageRoot, "manifest.json"), manifest);
 writeFileSync(
   join(stageRoot, "package.json"),

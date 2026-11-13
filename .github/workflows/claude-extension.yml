@@ -18,8 +18,8 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            target: win32-x64
-            label: Windows x64
+            target: universal
+            label: universal extension on Windows x64
 
     steps:
       - uses: actions/checkout@v4
