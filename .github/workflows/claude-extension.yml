@@ -1,0 +1,53 @@
+name: Claude Desktop Extension
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-extension:
+    name: Build ${{ matrix.label }} extension
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: darwin-arm64
+            label: macOS Apple Silicon
+          - os: windows-latest
+            target: win32-x64
+            label: Windows x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Type check MCP server
+        working-directory: packages/mcp-server
+        run: bun run typecheck
+
+      - name: Run MCP server tests
+        working-directory: packages/mcp-server
+        run: bun test
+
+      - name: Build and smoke-test extension
+        run: node scripts/build-claude-extension.mjs --target ${{ matrix.target }}
+
+      - name: Upload extension bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: allourthings-claude-extension-${{ matrix.target }}
+          path: packages/claude-extension/release/*.mcpb
+          if-no-files-found: error
