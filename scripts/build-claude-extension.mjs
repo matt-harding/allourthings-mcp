@@ -9,7 +9,6 @@ const serverRoot = join(repositoryRoot, "packages", "mcp-server");
 const stageRoot = join(extensionRoot, "build", "allourthings");
 const releaseRoot = join(extensionRoot, "release");
 const coreRoot = join(repositoryRoot, "node_modules", "@allourthings", "core");
-const iconSource = resolve(repositoryRoot, "..", "allourthings-website", "public", "allourthings-icon-512.png");
 const targets = {
   "darwin-arm64": {
     platform: "darwin",
@@ -72,7 +71,6 @@ function validateStage() {
     "server/package.json",
     "server/node_modules/@allourthings/core/index.js",
     `server/node_modules/@allourthings/core/${target.coreAddon}`,
-    "assets/allourthings-icon-512.png",
   ]) {
     if (!existsSync(join(stageRoot, relativePath))) throw new Error(`Missing staged file: ${relativePath}`);
   }
@@ -112,10 +110,6 @@ for (const file of requiredCoreFiles) {
   }
 }
 
-if (!existsSync(iconSource)) {
-  throw new Error(`Missing extension icon: ${iconSource}`);
-}
-
 run("bun", ["run", "build"], serverRoot);
 
 rmSync(stageRoot, { recursive: true, force: true });
@@ -132,7 +126,6 @@ writeFileSync(
 
 copy(join(serverRoot, "dist"), join(stageRoot, "server", "dist"));
 copy(join(serverRoot, "package.json"), join(stageRoot, "server", "package.json"));
-copy(iconSource, join(stageRoot, "assets", "allourthings-icon-512.png"));
 for (const file of requiredCoreFiles) {
   copy(join(coreRoot, file), join(stageRoot, "server", "node_modules", "@allourthings", "core", file));
 }

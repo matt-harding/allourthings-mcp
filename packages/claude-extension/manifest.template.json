@@ -16,7 +16,7 @@
     "type": "git",
     "url": "https://github.com/matt-harding/allourthings-mcp.git"
   },
-  "icon": "assets/allourthings-icon-512.png",
+  "icon": "https://allourthings.io/allourthings-icon-512.png",
   "keywords": ["inventory", "household", "warranties", "receipts", "local-first"],
   "license": "MIT",
   "privacy_policies": ["https://allourthings.io/privacy"],
