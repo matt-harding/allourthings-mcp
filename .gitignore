@@ -10,6 +10,10 @@ package-lock.json
 # Rust build artifacts
 target/
 
+# Generated Claude Desktop Extension staging area and release archive
+packages/claude-extension/build/
+packages/claude-extension/release/
+
 # Local AI context — kept off source control (contains internal notes)
 CLAUDE.md
 .mcpregistry_github_token

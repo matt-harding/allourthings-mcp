@@ -1,0 +1,61 @@
+{
+  "manifest_version": "0.4",
+  "name": "allourthings",
+  "version": "__VERSION__",
+  "display_name": "AllOurThings",
+  "description": "Search and manage your household inventory from Claude. Your vault stays on your Mac.",
+  "long_description": "AllOurThings connects Claude Desktop to a vault stored in a folder you choose on your Mac. Browse, search, add, update, and organise household items, warranties, manuals, receipts, and photos. No inventory data is sent to AllOurThings. The optional Attach file from URL tool downloads a file only when you explicitly ask Claude to use a public URL.",
+  "author": {
+    "name": "AllOurThings",
+    "url": "https://allourthings.io"
+  },
+  "homepage": "https://allourthings.io",
+  "documentation": "https://allourthings.io/docs",
+  "support": "https://www.linkedin.com/in/matthewrharding",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/matt-harding/allourthings-mcp.git"
+  },
+  "icon": "assets/allourthings-icon-512.png",
+  "keywords": ["inventory", "household", "warranties", "receipts", "local-first"],
+  "license": "MIT",
+  "privacy_policies": ["https://allourthings.io/privacy"],
+  "tools": [
+    { "name": "search_items", "description": "Search the local inventory by words." },
+    { "name": "list_items", "description": "List inventory items, optionally filtered by category, subcategory, or tags." },
+    { "name": "get_item", "description": "Get one inventory item by ID or name." },
+    { "name": "get_item_fields", "description": "List field names in use across the inventory." },
+    { "name": "list_categories", "description": "List categories, subcategories, tags, and their item counts." },
+    { "name": "get_attachment", "description": "Retrieve a local attachment such as a manual, receipt, or photo." },
+    { "name": "add_item", "description": "Add an item to the local inventory." },
+    { "name": "update_item", "description": "Update fields on an inventory item." },
+    { "name": "delete_item", "description": "Delete an inventory item and its attachments." },
+    { "name": "add_attachment", "description": "Add a file attachment to an inventory item." },
+    { "name": "attach_from_url", "description": "Download a file from a public URL and attach it to an inventory item." },
+    { "name": "delete_attachment", "description": "Delete an attachment from an inventory item." }
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/dist/index.js", "--data-dir", "${user_config.data_dir}"],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin"],
+    "runtimes": {
+      "node": ">=20"
+    }
+  },
+  "user_config": {
+    "data_dir": {
+      "type": "directory",
+      "title": "AllOurThings vault",
+      "description": "Select the existing folder that contains your AllOurThings items. The extension reads and writes this folder directly; it does not copy or upload your data.",
+      "required": true,
+      "multiple": false
+    }
+  }
+}

@@ -4,6 +4,9 @@
   "workspaces": [
     "packages/*"
   ],
+  "scripts": {
+    "claude-extension:build": "node scripts/build-claude-extension.mjs"
+  },
   "dependencies": {
     "@allourthings/core": "^2.1.0"
   }
