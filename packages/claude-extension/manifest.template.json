@@ -6,8 +6,8 @@
   "description": "Search and manage your household inventory from Claude. Your vault stays on your Mac.",
   "long_description": "AllOurThings connects Claude Desktop to a vault stored in a folder you choose on your Mac. Browse, search, add, update, and organise household items, warranties, manuals, receipts, and photos. No inventory data is sent to AllOurThings. The optional Attach file from URL tool downloads a file only when you explicitly ask Claude to use a public URL.",
   "author": {
-    "name": "AllOurThings",
-    "url": "https://allourthings.io"
+    "name": "Matt Harding",
+    "url": "https://github.com/matt-harding"
   },
   "homepage": "https://allourthings.io",
   "documentation": "https://allourthings.io/docs",
